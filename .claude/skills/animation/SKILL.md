@@ -4,11 +4,11 @@ description: Game-ready animation in Blender including walk/run/idle cycles, com
 license: MIT
 metadata:
   author: https://github.com/arjun988
-  version: "1.0.0"
+  version: "1.1.0"
   domain: blender
   role: specialist
-  triggers: animation, animate, walk cycle, run cycle, idle, combat, NLA, graph editor, keyframe
-  related-skills: rigging, blender-modeler, export-pipeline
+  triggers: animation, animate, walk cycle, run cycle, idle, combat, NLA, graph editor, keyframe, animate like this video, imitate GIF, motion brief, animation source
+  related-skills: rigging, blender-modeler, export-pipeline, deformation-prep, web-export
 ---
 
 # Animation
@@ -22,6 +22,14 @@ Game-ready motion with clean keyframes. Readable silhouettes in motion. Engine-c
 - Mechanical/prop animation
 - Camera animation
 - Object animation with constraints
+- Clips that imitate a user-supplied video/GIF/description (Production Mode)
+
+## Reference-Driven Clips (Production Mode)
+
+When a clip must look like a source the user provides, follow `references/reference-driven-motion.md`:
+request the source if missing → frame sheet → `motion-brief.yaml` → parameterised generators → bake to deform bones → side-by-side compare → user approves (gate G5). The goal is a similar look and timing, not frame-exact capture.
+
+For web delivery: one action per clip named as in the spec, bake constraints/IK to deform bones, then `web-export` resamples losslessly.
 
 ## Workflow
 
@@ -122,3 +130,5 @@ Naming: `AN_[Char]_[Action]_[Variant]`
 |-------|-----------|-----------|
 | Walk cycle breakdown | `references/walk-cycle.md` | Locomotion |
 | Combat timing | `references/combat-animation.md` | Action games |
+| Reference-driven motion (video/GIF/description) | `references/reference-driven-motion.md` | Clip must imitate a user source |
+| Web runtime limits | `../web-export/references/web-runtime-limits.md` | Clips for browsers |

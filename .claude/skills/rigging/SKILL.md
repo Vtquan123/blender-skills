@@ -4,11 +4,11 @@ description: Production rigging in Blender with armatures, IK/FK, constraints, w
 license: MIT
 metadata:
   author: https://github.com/arjun988
-  version: "1.0.0"
+  version: "1.1.0"
   domain: blender
   role: specialist
-  triggers: rig, rigging, armature, bone, IK, FK, weight paint, constraint, facial rig, driver
-  related-skills: animation, character-artist, blender-modeler
+  triggers: rig, rigging, armature, bone, IK, FK, weight paint, constraint, facial rig, driver, Rigify, metarig, twist bone, rigid part, hinge
+  related-skills: animation, character-artist, blender-modeler, deformation-prep, web-export
 ---
 
 # Rigging
@@ -22,6 +22,12 @@ Functional rigs supporting intended motion. Clean deformation. Engine-compatible
 - Facial expression rigs
 - Prop rigs (doors, vehicles, weapons)
 - Before any animation work
+
+## Existing High-Detail Meshes (Production Mode)
+
+Do not rig a scanned, sculpted or AI-generated mesh directly. Run `deformation-prep` first: joint analysis, region strategy (skin / rigid part / free chain), deform mesh with joint loops, then the rig and ROM test defined there. Category templates (Rigify Human, Wolf, Cat; custom bird; hinge rigs for objects) are in `../deformation-prep/references/category-rigs.md`.
+
+For web targets: linear blend skinning, 4 influences per vertex, twist bones on long limbs, deform bones only in the export — see `../web-export/references/web-runtime-limits.md`.
 
 ## Workflow
 
@@ -141,3 +147,6 @@ Minimum game facial: jaw open, blink L/R, brow up/down.
 |-------|-----------|-----------|
 | Humanoid rig | `references/humanoid-rig.md` | Characters |
 | Mechanical rig | `references/mechanical-rig.md` | Props, vehicles |
+| Existing mesh → animatable | `../deformation-prep/SKILL.md` | Source is a scan/sculpt/AI mesh |
+| Category templates | `../deformation-prep/references/category-rigs.md` | Human, dog, cat, parrot, book, box, chair, table |
+| ROM test | `../deformation-prep/references/rom-test.md` | Before animation |
