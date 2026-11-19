@@ -1,0 +1,13 @@
+# Category preset — starting values; output-spec.yaml overrides any field.
+# Plain chairs are static; set family: articulated_object in the spec for swivel or folding chairs.
+category: chair
+family: static_object
+template: {kind: none}
+typical_size_m: 0.9
+optional_parts:
+  seat_swivel: {type: rigid, hinge: swivel_axis}
+  fold_frame: {type: rigid, hinge: fold_axis}
+hinges:
+  swivel_axis: {axis_hint: vertical_through_seat_center, limits_deg: [-180, 180]}
+  fold_axis: {axis_hint: side_pivot, limits_deg: [0, 90]}
+default_clips: [turntable]

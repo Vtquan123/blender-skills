@@ -1,0 +1,13 @@
+# Category preset — starting values; output-spec.yaml overrides any field.
+category: box
+family: articulated_object
+template: {kind: hinge, script: production/scripts/blender/hinge_rig.py}
+typical_size_m: 0.3
+parts:
+  body: {type: rigid, fixed: true}
+  lid: {type: rigid, hinge: lid_hinge}
+hinges:
+  lid_hinge: {axis_hint: back_top_edge, limits_deg: [0, 110]}
+rom_limits:
+  lid_hinge: {open: [0, 110]}
+default_clips: [open, close]

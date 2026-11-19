@@ -1,0 +1,63 @@
+# Output Specification — declared by the user.
+# Copy to projects/<name>/output-spec.yaml, start from a preset in ../presets/, then edit.
+# null = not decided yet: the director asks before any step that depends on it.
+# Schema: .claude/skills/references/production-spec.md
+
+asset:
+  name: null                 # e.g. calico_cat
+  category: null             # file name in presets/categories/ (human, dog, cat, parrot, book, box, chair, table, ...)
+  real_size_m: null          # longest real-world dimension; used to normalise scale
+
+target:
+  platform: web              # web | unity | unreal | godot | generic
+  renderer: three.js         # three.js | r3f | babylon | model-viewer | engine name
+  devices: [mobile, desktop]
+
+budgets:
+  triangles: null
+  max_bones: null
+  max_influences: 4          # web runtimes read 4
+  textures:
+    max_size: null           # px, e.g. 1024 / 2048
+    format: ktx2             # ktx2 | webp | png | jpeg
+  materials: null
+  draw_calls: null
+  file_size_mb: null
+
+geometry:
+  strategy: auto             # auto | keep | decimate | remesh | retopo
+  preserve: [silhouette, uv_seams]
+
+surface:
+  uv: auto                   # keep | repack | new | auto
+  bake_maps: [basecolor, normal, orm]
+
+rig:
+  required: auto             # auto | true | false
+  method: auto               # existing | rigify | custom_template | unirig | rigid_parts | none | auto
+  template: null             # from category preset if null
+  regions: {}                # optional overrides: {wing.L: rigid|skin|chain, ...}
+
+animation:
+  fps: 30
+  clips: []
+  # - name: walk
+  #   loop: true
+  #   duration_s: null
+  #   root_motion: false
+  #   source: {type: none, status: requested}   # none | video | gif | images | motion_file | text
+
+lod:
+  levels: []                 # e.g. [{ratio: 0.5}, {ratio: 0.25}]
+
+compression:
+  geometry: meshopt          # meshopt | draco | none
+  textures: ktx2             # ktx2 | webp | none
+
+acceptance:
+  approve_at: [G1, G4a, G4c]
+  G2: {silhouette_max_dev: null}
+  G4c: {volume_loss_max: null, pinch_max: null, stretch_max: null, self_intersections_max: null}
+  G5: {loop_seam_max_deg: null, foot_slide_max_m: null}
+  G6: {validator_errors_max: 0}
+  G7: {file_size_mb_max: null, draw_calls_max: null, max_vertex_dev_m: null}

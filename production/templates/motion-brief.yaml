@@ -1,0 +1,16 @@
+# Motion Brief — written after reading a clip source (video/GIF/images/text); the user may edit it.
+# Drives production/scripts/motion/generators.py. Guide: .claude/skills/animation/references/reference-driven-motion.md
+
+clip: null
+source: null                 # input/motion/<file> or "text"
+generator: null              # quadruped_walk | quadruped_trot | biped_walk | biped_idle | arm_gesture | sit | tail_wag
+                             # wing_flap | head_tilt | perch_bob | hinge_open | turntable | bounce_in
+fps: 30
+cycle_s: null                # loop length or clip length
+loop: true
+key_poses: []                # [{t: 0.0, name: contact_L, notes: ""}]
+params: {}                   # generator parameters, e.g. {stride: 0.6, bounce: 0.15, tail_amp_deg: 12}
+secondary: []                # [{chain: tail, delay_frames: 3, damping: 0.6}]
+camera: {view: side}         # angle used to compare with the source
+tolerance: {cycle_s: 0.05, amplitude_ratio: 0.2}
+status: draft                # draft | approved

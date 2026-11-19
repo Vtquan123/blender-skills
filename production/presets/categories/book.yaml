@@ -1,0 +1,14 @@
+# Category preset — starting values; output-spec.yaml overrides any field.
+category: book
+family: articulated_object
+template: {kind: hinge, script: production/scripts/blender/hinge_rig.py}
+typical_size_m: 0.25
+parts:
+  cover_front: {type: rigid, hinge: spine}
+  cover_back: {type: rigid, fixed: true}
+  pages: {type: chain, bones: 4, hinge: spine}   # page bend for flips
+hinges:
+  spine: {axis_hint: long_edge_of_spine, limits_deg: [0, 180]}
+rom_limits:
+  spine: {open: [0, 180]}
+default_clips: [open, close, page_flip]

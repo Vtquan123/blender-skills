@@ -1,0 +1,16 @@
+# Starting values for a single showcase model (product viewer, hero section). Copy into output-spec.yaml and edit.
+preset: web-hero
+target: {platform: web, renderer: three.js, devices: [desktop, mobile]}
+budgets:
+  triangles: 80000
+  max_bones: 120
+  max_influences: 4
+  textures: {max_size: 2048, format: ktx2}
+  materials: 3
+  draw_calls: 10
+  file_size_mb: 15
+lod:
+  levels: [{ratio: 0.4}]
+compression: {geometry: meshopt, textures: ktx2}
+acceptance:
+  G7: {file_size_mb_max: 15, draw_calls_max: 10}

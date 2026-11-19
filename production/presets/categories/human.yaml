@@ -1,0 +1,28 @@
+# Category preset — starting values; output-spec.yaml overrides any field.
+# Docs: .claude/skills/deformation-prep/references/category-rigs.md
+category: human
+family: creature
+template: {kind: rigify, metarig: human, simplified: basic_human}
+typical_size_m: 1.75
+forward_axis: -Y
+focus_joints: [shoulder, elbow, wrist, hip, knee, ankle, fingers, neck, face]
+joint_rules:
+  elbow: {type: hinge, loops: 3, supports: 1}
+  knee: {type: hinge, loops: 3, supports: 1}
+  shoulder: {type: ball, density: 1.5}
+  hip: {type: ball, density: 1.5}
+  forearm: {type: twist, twist_bones: 2}
+  upper_arm: {type: twist, twist_bones: 1}
+  thigh: {type: twist, twist_bones: 1}
+  fingers: {type: digit, loops_per_knuckle: 3}
+  neck: {type: chain}
+  spine: {type: chain}
+rom_limits:   # degrees, starting points
+  elbow: {bend: [0, 140]}
+  knee: {bend: [0, 135]}
+  shoulder: {raise: [-30, 160], swing: [-45, 120], twist: [-70, 70]}
+  hip: {flex: [-20, 110], abduct: [-10, 45]}
+  wrist: {bend: [-70, 70], twist: [-80, 80]}
+  neck: {bend: [-40, 50], turn: [-70, 70]}
+default_regions: {hair_long: chain, accessories_hard: rigid}
+default_clips: [idle, walk, run, wave]

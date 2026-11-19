@@ -1,0 +1,25 @@
+{
+  "name": "universal-3d-production-tools",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Node tools for the Universal 3D Production pipeline (web optimisation and validation). Run `npm install` in this folder.",
+  "type": "module",
+  "engines": { "node": ">=18" },
+  "scripts": {
+    "optimize": "node scripts/node/optimize.mjs",
+    "validate": "node scripts/node/validate_gltf.mjs",
+    "runtime-check": "node scripts/validation/runtime_check.mjs",
+    "browsers": "playwright install chromium"
+  },
+  "dependencies": {
+    "@gltf-transform/cli": "~4.5.1",
+    "@gltf-transform/core": "~4.5.1",
+    "@gltf-transform/extensions": "~4.5.1",
+    "@gltf-transform/functions": "~4.5.1",
+    "gltf-validator": "2.0.0-dev.3.10",
+    "meshoptimizer": "~1.3.0",
+    "playwright": "~1.65.1",
+    "three": "~0.187.0",
+    "yaml": "~2.9.1"
+  }
+}

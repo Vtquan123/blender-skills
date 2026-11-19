@@ -1,0 +1,15 @@
+# Starting values for phones / low-end laptops. Copy the parts you want into output-spec.yaml and edit.
+# These are not limits enforced by skills; only output-spec.yaml is.
+preset: web-mobile
+target: {platform: web, renderer: three.js, devices: [mobile]}
+budgets:
+  triangles: 15000
+  max_bones: 60
+  max_influences: 4
+  textures: {max_size: 1024, format: ktx2}
+  materials: 1
+  draw_calls: 4
+  file_size_mb: 3
+compression: {geometry: meshopt, textures: ktx2}
+acceptance:
+  G7: {file_size_mb_max: 3, draw_calls_max: 4}

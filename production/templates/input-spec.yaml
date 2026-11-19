@@ -1,0 +1,45 @@
+# Input Asset Specification — MEASURED by asset-intake (production/scripts/blender/intake.py).
+# Do not fill by hand. Anything that cannot be measured stays "unknown".
+# Schema: .claude/skills/references/production-spec.md
+
+source:
+  file: unknown
+  format: unknown
+  bytes: unknown
+  sha256: unknown
+  importer: unknown
+
+scene:
+  objects: []          # {name, type, parent, triangles, vertices, materials, uv_layers, shape_keys, vertex_groups, modifiers}
+
+geometry:
+  triangles_total: unknown
+  vertices_total: unknown
+  quads_ratio: unknown
+  components_raw: unknown
+  components_welded: unknown
+  boundary_edges_raw: unknown
+  boundary_edges_welded: unknown
+  nonmanifold_edges_welded: unknown
+  dimensions_m: unknown
+  bbox_min: unknown
+  bbox_max: unknown
+
+materials: []          # {name, linked_inputs, blend_method}
+textures: []           # {name, width, height, colorspace, format}
+
+rig:
+  armatures: []
+  bones_total: 0
+
+animation:
+  actions: []          # {name, frame_start, frame_end}
+
+hints:
+  category_guess: {value: unknown, confidence: 0}
+  forward_axis_guess: {value: unknown, confidence: 0}
+  up_axis_guess: {value: unknown, confidence: 0}
+  pose_hint: {value: unknown, confidence: 0}
+  generator_hint: {value: unknown, confidence: 0}
+
+issues: []

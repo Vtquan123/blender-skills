@@ -1,0 +1,14 @@
+# Starting values for desktop browsers. Copy into output-spec.yaml and edit.
+preset: web-desktop
+target: {platform: web, renderer: three.js, devices: [desktop]}
+budgets:
+  triangles: 40000
+  max_bones: 100
+  max_influences: 4
+  textures: {max_size: 2048, format: ktx2}
+  materials: 2
+  draw_calls: 8
+  file_size_mb: 8
+compression: {geometry: meshopt, textures: ktx2}
+acceptance:
+  G7: {file_size_mb_max: 8, draw_calls_max: 8}

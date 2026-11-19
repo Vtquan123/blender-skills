@@ -1,0 +1,28 @@
+# Category preset — starting values; output-spec.yaml overrides any field.
+category: dog
+family: creature
+template: {kind: rigify, metarig: wolf}
+typical_size_m: 0.6
+forward_axis: -Y
+focus_joints: [front_shoulder, front_elbow, front_wrist, hip, hind_knee, hock, neck, tail, ears, jaw]
+joint_rules:
+  front_elbow: {type: hinge, loops: 3, supports: 1}
+  hind_knee: {type: hinge, loops: 3, supports: 1}
+  hock: {type: hinge, loops: 3, supports: 1}     # digitigrade "reverse knee" is the ankle
+  front_shoulder: {type: ball, density: 1.5}
+  hip: {type: ball, density: 1.5}
+  neck: {type: chain}
+  spine: {type: chain}
+  tail: {type: chain}
+  ears: {type: chain}
+rom_limits:
+  front_elbow: {bend: [0, 120]}
+  hind_knee: {bend: [0, 110]}
+  hock: {bend: [0, 110]}
+  front_shoulder: {swing: [-60, 60]}
+  hip: {swing: [-50, 60]}
+  neck: {bend: [-40, 40], turn: [-60, 60]}
+  tail: {bend: [-60, 60]}
+default_regions: {collar: skin, collar_tag: rigid, fur_fringe: chain}
+default_clips: [idle, walk, run, sit, tail_wag]
+notes: Short-legged breeds (corgi) have tiny limb segments — keep joint bands narrow and limit stride.

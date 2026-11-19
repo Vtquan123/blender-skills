@@ -1,0 +1,26 @@
+# Category preset — starting values; output-spec.yaml overrides any field.
+category: cat
+family: creature
+template: {kind: rigify, metarig: cat}
+typical_size_m: 0.45
+forward_axis: -Y
+focus_joints: [front_shoulder, front_elbow, front_wrist, hip, hind_knee, hock, spine, neck, tail, ears]
+joint_rules:
+  front_elbow: {type: hinge, loops: 3, supports: 1}
+  hind_knee: {type: hinge, loops: 3, supports: 1}
+  hock: {type: hinge, loops: 3, supports: 1}
+  front_shoulder: {type: ball, density: 1.5}
+  hip: {type: ball, density: 1.5}
+  spine: {type: chain, min_loops_per_bone: 2}    # cats arch strongly
+  tail: {type: chain, min_loops_per_bone: 2}
+  neck: {type: chain}
+  ears: {type: chain}
+rom_limits:
+  front_elbow: {bend: [0, 130]}
+  hind_knee: {bend: [0, 120]}
+  hock: {bend: [0, 120]}
+  spine: {arch: [-35, 45]}
+  neck: {bend: [-45, 45], turn: [-70, 70]}
+  tail: {bend: [-80, 80]}
+default_regions: {whiskers: texture_only}
+default_clips: [idle, walk, jump, sit]

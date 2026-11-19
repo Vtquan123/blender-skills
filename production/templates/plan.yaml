@@ -1,0 +1,19 @@
+# Production Plan — written by blender-director (Production Mode), approved by the user at G1.
+# Strategy table: .claude/skills/blender-director/references/production-mode.md §3
+
+project: null
+strategy: null            # creature_deform | articulated_rigid | static_optimise
+category: null
+stages:
+  - {id: intake,    enabled: true,  skill: asset-intake,       gate: G0}
+  - {id: geometry,  enabled: false, skill: null,               gate: G2,         params: {}}
+  - {id: surface,   enabled: false, skill: texture-workflow,   gate: G3,         params: {}}
+  - {id: rig,       enabled: false, skill: deformation-prep,   gate: [G4a, G4b, G4c], params: {regions: {}}}
+  - {id: animation, enabled: false, skill: animation,          gate: G5,         params: {clips: []}}
+  - {id: lod,       enabled: false, skill: lod-pipeline,       gate: G2}
+  - {id: export,    enabled: true,  skill: web-export,         gate: [G6, G7]}
+  - {id: deliver,   enabled: true,  skill: qa-review,          gate: G8}
+approvals: [G1]
+open_questions: []
+approved_by: null
+approved_at: null
