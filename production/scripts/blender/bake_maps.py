@@ -12,6 +12,7 @@ args:
     max_ray      (float, auto)     max ray distance; default 2x extrusion
     margin       (int, 16)         px
     samples      (int, 16)         Cycles samples (AO uses these; others need few)
+    device       (str, "auto")      auto | GPU | CPU — auto uses the GPU when Cycles has a compute device (Metal/CUDA/OptiX/HIP/oneAPI)
     out_dir      (str, required)   e.g. projects/<name>/textures
     name         (str)             file prefix, default target name
     pack_orm     (bool, True)      write <name>_ORM.png (R=AO, G=roughness, B=metallic) from baked maps
@@ -43,6 +44,19 @@ def _load_common():
 
 C = _load_common()
 ALL_MAPS = ["basecolor", "normal", "roughness", "metallic", "ao"]
+
+
+def _pick_device(choice: str) -> str:
+    if choice.upper() in ("CPU", "GPU"):
+        return choice.upper()
+    try:
+        prefs = bpy.context.preferences.addons["cycles"].preferences
+        prefs.refresh_devices()
+        if prefs.compute_device_type != "NONE" and any(d.use and d.type != "CPU" for d in prefs.devices):
+            return "GPU"
+    except Exception:  # background builds without GPU support
+        pass
+    return "CPU"
 
 
 def _principled(mat):
@@ -175,6 +189,8 @@ def run(args: dict) -> dict:
     prev_engine = scene.render.engine
     scene.render.engine = "CYCLES"
     scene.cycles.samples = int(args.get("samples", 16))
+    prev_device = scene.cycles.device
+    scene.cycles.device = _pick_device(args.get("device", "auto"))
     paths, swapped = {}, []
     src_mats = [slot.material for slot in src.material_slots]
     try:
@@ -204,6 +220,7 @@ def run(args: dict) -> dict:
             if c.name in bpy.data.materials:
                 bpy.data.materials.remove(c)
         scene.render.engine = prev_engine
+        scene.cycles.device = prev_device
 
     stats = {}
     for m, p in paths.items():
@@ -227,5 +244,6 @@ def run(args: dict) -> dict:
         paths["orm"] = _save(orm, os.path.join(out_dir, f"{name}_ORM.png"))
 
     mat_name = build_material(tgt, paths, name) if args.get("build_material", True) else None
+    s["device"] = _pick_device(args.get("device", "auto"))
     return C.result_ok(paths=paths, stats=stats, settings=s, material=mat_name,
                        empty_maps=[m for m, st in stats.items() if st["empty"]])
