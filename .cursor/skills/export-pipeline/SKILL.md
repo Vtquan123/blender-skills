@@ -4,11 +4,11 @@ description: Production export from Blender to FBX, GLTF, OBJ, USD, and Alembic 
 license: MIT
 metadata:
   author: https://github.com/arjun988
-  version: "1.0.0"
+  version: "1.1.0"
   domain: blender
   role: specialist
   triggers: export, FBX, GLTF, GLB, OBJ, USD, Alembic, Unity, Unreal, game engine import
-  related-skills: asset-optimization, blender-modeler, materials
+  related-skills: asset-optimization, blender-modeler, materials, web-export
 ---
 
 # Export Pipeline
@@ -63,8 +63,11 @@ Path Mode: Copy (embed textures)
 Format: GLB (single file) or GLTF Separate
 Include: Selected Objects
 Transform: +Y Up
-Compression: Draco (if supported by engine)
+Compression: Draco or Meshopt (if supported by the target; recent Blender
+             exporters expose both — check operator properties first)
 ```
+
+**Web / browser targets:** use `web-export` — export an uncompressed master GLB here, then compress once with glTF-Transform (meshopt + KTX2/WebP). Never compress twice.
 
 ## Export Verification Matrix
 

@@ -8,7 +8,7 @@ metadata:
   domain: blender
   role: specialist
   triggers: dreamcore, weirdcore, traumacore, dream horror, nostalgic horror, surreal childhood, weirdcore edit
-  related-skills: liminal-space-style, surreal-mood, horror-style, compositing, lighting
+  related-skills: liminal-space-style, dream-surreal-mood, horror-style, compositing, lighting
 ---
 
 # Dream / Weirdcore Style

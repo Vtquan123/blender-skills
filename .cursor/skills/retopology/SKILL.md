@@ -4,11 +4,11 @@ description: Production retopology for animation-ready, low-poly, quad-dominant 
 license: MIT
 metadata:
   author: https://github.com/arjun988
-  version: "1.0.0"
+  version: "1.1.0"
   domain: blender
   role: specialist
-  triggers: retopo, retopology, edge loop, quad, topology, animation ready, poly reduction, remesh
-  related-skills: character-artist, creature-artist, sculpting, uv-workflow
+  triggers: retopo, retopology, edge loop, quad, topology, animation ready, poly reduction, remesh, QuadriFlow, joint loops
+  related-skills: character-artist, creature-artist, sculpting, uv-workflow, deformation-prep
 ---
 
 # Retopology
@@ -40,6 +40,8 @@ High-Poly Reference → Guide Setup → Block Retopo → Loop Refinement
 | Symmetry retopo | Bilateral characters | Medium |
 
 **Production default:** Manual with shrinkwrap for hero; Quad Remesh + cleanup for background.
+
+**Automated (Production Mode):** QuadriFlow base at the spec budget → script-enforced joint loops → shrinkwrap → per-joint measurement → user review (gate G4a). Rules and procedure: `../deformation-prep/references/joint-loop-rules.md`. Static assets that only need fewer triangles use decimation + normal bake via `asset-optimization` instead.
 
 ## Edge Loop Rules
 
@@ -119,3 +121,4 @@ See `../references/polycount-budgets.md`. Retopo is where budget is enforced.
 |-------|-----------|-----------|
 | Facial retopo | `references/facial-retopo.md` | Character faces |
 | Game vs cinematic | `references/game-cinematic-topo.md` | Budget decisions |
+| Automated deform retopo + joint loop rules | `../deformation-prep/references/joint-loop-rules.md` | Production Mode, existing meshes |

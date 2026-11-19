@@ -4,11 +4,11 @@ description: Production texture workflow for atlases, baking AO/curvature/normal
 license: MIT
 metadata:
   author: https://github.com/arjun988
-  version: "1.0.0"
+  version: "1.1.0"
   domain: blender
   role: specialist
-  triggers: texture, bake, normal map, AO, curvature, roughness, metallic, height, atlas, decal, emission
-  related-skills: uv-workflow, materials, asset-optimization
+  triggers: texture, bake, normal map, AO, curvature, roughness, metallic, height, atlas, decal, emission, transfer textures, rebake to new UVs
+  related-skills: uv-workflow, materials, asset-optimization, deformation-prep, web-export
 ---
 
 # Texture Workflow
@@ -65,6 +65,18 @@ Naming: `T_[Asset]_[Map]` per `../references/naming-conventions.md`
 | Curvature | High sculpt | Wear masks |
 | Position | High | Optional (blending) |
 | Thickness | Subsurface meshes | Characters |
+
+## Source → New Mesh Transfer (Production Mode)
+
+When geometry was decimated or rebuilt (`asset-optimization`, `deformation-prep`), the source's textures no longer match the new UVs. `production/scripts/blender/bake_maps.py` bakes from the untouched source onto the new mesh:
+
+| Map | Bake type | Notes |
+|-----|-----------|-------|
+| Base colour | Emit pass of the source colour texture (avoids lighting in the bake) | sRGB |
+| Normal | Selected-to-active normal, tangent space, OpenGL (+Y) for glTF | Combines source normal map detail + shape difference |
+| ORM | AO from source geometry → R; source roughness → G; source metallic → B | glTF reads occlusion R, roughness G, metallic B |
+
+Cage/extrusion from asset scale (≈ 1 % of the bbox diagonal as a start), margin ≥ 16 px, resolution from `budgets.textures.max_size`. Result checked at gate G3 (non-empty maps, no seams, screenshot vs source).
 
 ## Texture Atlas Strategy
 

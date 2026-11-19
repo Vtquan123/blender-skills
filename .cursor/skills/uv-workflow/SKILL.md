@@ -4,11 +4,11 @@ description: Production UV unwrapping for seam placement, UV packing, texel dens
 license: MIT
 metadata:
   author: https://github.com/arjun988
-  version: "1.0.0"
+  version: "1.1.0"
   domain: blender
   role: specialist
   triggers: UV, unwrap, seam, texel density, UV pack, UDIM, lightmap UV, UV layout
-  related-skills: texture-workflow, materials, export-pipeline
+  related-skills: texture-workflow, materials, export-pipeline, deformation-prep
 ---
 
 # UV Workflow
@@ -42,6 +42,8 @@ Never place seams on:
 - Face (front)
 - Primary gameplay-visible surfaces
 - Deforming joint centers (relocate to nearby hidden area)
+
+**Production Mode (rebuilt meshes):** after `deformation-prep` or decimation the new mesh needs fresh UVs before `texture-workflow` transfers the source textures. Keep seams out of joint bands and rigid-part borders; pack to the spec's texture size with ≥ 16 px margin; gate G3 checks overlap and texel density.
 
 ## Texel Density
 

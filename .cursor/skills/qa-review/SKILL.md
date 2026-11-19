@@ -4,11 +4,11 @@ description: Production QA gate for Blender assets using viewport screenshots, v
 license: MIT
 metadata:
   author: https://github.com/arjun988
-  version: "1.0.0"
+  version: "1.1.0"
   domain: blender
   role: specialist
-  triggers: QA, quality assurance, review, validation, checklist, screenshot review, ship check, art review
-  related-skills: asset-optimization, export-pipeline, blender-director, lookdev
+  triggers: QA, quality assurance, review, validation, checklist, screenshot review, ship check, art review, quality gate, gate report
+  related-skills: asset-optimization, export-pipeline, blender-director, lookdev, web-export, deformation-prep
 ---
 
 # QA Review
@@ -21,6 +21,11 @@ Screenshot-backed review. Checklist gate. Explicit ship / no-ship.
 - After major modeling/lookdev milestones
 - Reference-match final compare
 - Periodic scene health checks
+- Production Mode gates G0–G8 (automated metrics + approvals)
+
+## Automated Gates (Production Mode)
+
+Each stage ends with a gate that compares measured metrics with `output-spec.yaml → acceptance` and writes `reports/gate-<id>.json` (`pass` / `fail` / `needs_review`). Approval gates (G1, G4a, G4c by default) need an explicit user decision recorded in the JSON. Gate list, metrics and producers: `references/production-gates.md`.
 
 ## Workflow
 
@@ -86,3 +91,4 @@ Use `get_viewport_screenshot` via MCP when connected.
 |-------|-----------|----------|
 | Qa Verdict Template | `references/qa-verdict-template.md` | When needed |
 | Screenshot Angles | `references/screenshot-angles.md` | When needed |
+| Production Gates | `references/production-gates.md` | Production Mode stages |

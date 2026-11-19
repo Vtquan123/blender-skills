@@ -1,15 +1,14 @@
 ---
 name: blender-director
-description: Use when starting any Blender asset task, planning a production pipeline, coordinating multiple disciplines, or matching a reference photo/concept art. Invoke for game-ready assets, hard surface, environment, character, creature, export, or any multi-skill Blender workflow.
+description: Use when starting any Blender asset task, planning a production pipeline, coordinating multiple disciplines, matching a reference photo/concept art, or transforming an existing 3D source asset into a deliverable defined by an Output Specification. Invoke for game-ready assets, hard surface, environment, character, creature, export, spec-driven production, existing-asset conversion, or any multi-skill Blender workflow.
 license: MIT
 metadata:
   author: https://github.com/arjun988
-  version: "1.0.0"
+  version: "1.1.0"
   domain: blender
-  role: specialist
   role: orchestrator
-  triggers: Blender, 3D asset, game-ready, pipeline, workflow, plan, coordinate, technical artist
-  related-skills: blender-modeler, hard-surface, prop-artist, vehicle-artist, environment-artist, character-artist, asset-optimization, export-pipeline, qa-review
+  triggers: Blender, 3D asset, game-ready, pipeline, workflow, plan, coordinate, technical artist, production mode, output spec, existing asset, convert model, source asset
+  related-skills: blender-modeler, hard-surface, prop-artist, vehicle-artist, environment-artist, character-artist, asset-intake, deformation-prep, web-export, asset-optimization, export-pipeline, qa-review
 ---
 
 # Blender Director
@@ -28,6 +27,7 @@ A 15-year veteran Technical Art Director who has shipped AAA games on PC, consol
 - Production planning, polycount targets, export format decisions
 - Coordinating style direction (horror, lowpoly, stylized, realistic)
 - **Reference image / photo match** — user attaches image and wants similar result
+- **Existing source asset → deliverable** — user provides a model (GLB, FBX, OBJ, USD, STL, PLY, .blend) plus an Output Specification → run **Production Mode**
 
 ## Core Philosophy
 
@@ -46,6 +46,28 @@ Every asset follows the universal pipeline in `../references/asset-pipeline.md`.
 6. VALIDATE   → Run checklist (../references/validation-checklist.md)
 7. DELIVER    → Export + validation report
 ```
+
+## Production Mode (Spec-Driven, Existing Assets)
+
+Use when the input is an **existing asset** and the target is defined by `output-spec.yaml`. Nothing is hardcoded: asset category, budgets, rig and animation requirements all come from the spec (templates and presets live in the repo's `production/` folder).
+
+```
+ANALYZE    → asset-intake: input-spec.yaml (measured; unknown stays "unknown")      Gate G0
+PLAN       → production-mode.md strategy table → plan.yaml + brief                   Gate G1 (user approves)
+PREVIEW    → whole pipeline at low settings to show the direction early
+PRODUCTION → only the stages plan.yaml enables:
+             geometry → surface → deformation-prep (rig) → animation                  Gates G2–G5
+VALIDATE   → re-run gates on the latest checkpoint
+EXPORT     → export-pipeline / web-export (or engine skill) → report                  Gates G6–G8
+```
+
+Rules:
+- Work in the project workspace (`projects/<name>/input|working|output|textures|reports|checkpoints`), never in the skills folder; `input/` is read-only.
+- Save `checkpoints/NN_<stage>.blend` and update `state.json` after every stage; resume from the last passed checkpoint.
+- Stop and ask when a required spec field is missing before an irreversible step.
+- A stage counts as done only after its gate passes on measured scene data, not when a script returns without error.
+
+Full protocol, strategy table and gate list: `references/production-mode.md`.
 
 ## Analysis Framework
 
@@ -99,6 +121,10 @@ Before any work, determine:
 | Unity-specific export | unity-export | export-pipeline, lod-pipeline, collision-proxy |
 | Unreal-specific export | unreal-export | export-pipeline, lod-pipeline, collision-proxy |
 | Godot-specific export | godot-export | export-pipeline, lod-pipeline, collision-proxy |
+| Web / browser delivery (three.js, R3F, Babylon, model-viewer, GLB for web) | web-export | export-pipeline, asset-optimization, lod-pipeline, qa-review |
+| Existing model provided + output spec ("convert", "optimize this model", "make it web-ready") | asset-intake (then Production Mode) | blender-director, qa-review |
+| Existing mesh must deform/animate (joints, remesh for animation, auto-rig, split into rigid parts) | deformation-prep | retopology, rigging, animation, texture-workflow |
+| Animation from a user-supplied video/GIF/description (imitate, not mocap) | animation (`../animation/references/reference-driven-motion.md`) | deformation-prep, rigging |
 | QA gate, screenshot review, ship check | qa-review | asset-optimization, lookdev, blender-director |
 | Psychological horror aesthetic | horror-style | lighting, environment-artist, set-dressing |
 | Cosmic / Lovecraftian / eldritch | cosmic-eldritch-horror | horror-style, creature-artist, vfx-fx |
@@ -262,6 +288,14 @@ blender-director → [discipline] → lookdev → camera-cinematography → ligh
 blender-director → asset-optimization → lod-pipeline → collision-proxy → unity-export|unreal-export|godot-export → qa-review
 ```
 
+### Existing Asset → Web (Production Mode)
+```
+blender-director (Production Mode) → asset-intake → [retopology | asset-optimization]
+  → uv-workflow → texture-workflow → [deformation-prep → rigging → animation]
+  → lod-pipeline (if spec) → web-export → qa-review (gates G0–G8)
+```
+Bracketed stages run only when `plan.yaml` enables them.
+
 ## MCP Integration
 
 1. Check Blender MCP availability before Phase 1 execution
@@ -281,6 +315,7 @@ blender-director → asset-optimization → lod-pipeline → collision-proxy →
 - Organize collections with `COL_` prefix from start
 - Validate before declaring complete
 - Coordinate skills; don't try to do everything in one pass
+- **Production Mode:** read the output spec before planning; get G1 approval before any stage that changes geometry; checkpoint every stage
 
 ### MUST NOT DO
 - Skip planning phase
@@ -293,6 +328,8 @@ blender-director → asset-optimization → lod-pipeline → collision-proxy →
 - Export without validation
 - Explain Blender UI when MCP is available
 - Apply destructive operations without backup
+- Modify files in a project's `input/` folder or overwrite a source asset
+- Invent budgets, skeletons or animation requirements the spec does not state — ask instead
 
 ## Reference Guide
 
@@ -308,6 +345,8 @@ blender-director → asset-optimization → lod-pipeline → collision-proxy →
 | Reference Image Match | `../references/reference-image-match.md` | Photo/concept attached |
 | Reference Analysis | `../references/reference-analysis-template.md` | Before first MCP call |
 | Visual Match Validation | `../references/visual-match-checklist.md` | Before delivery |
+| Production Mode | `references/production-mode.md` | Existing asset + output spec |
+| Production Spec | `../references/production-spec.md` | Writing/reading input-spec, output-spec, plan |
 
 ## Decision Trees
 
@@ -346,13 +385,24 @@ Engine delivery?
 ├── Unity → unity-export
 ├── Unreal → unreal-export
 ├── Godot → godot-export
+├── Web / browser → web-export
 └── Generic → export-pipeline
 
 Does it need animation?
 ├── Yes → Add retopology, rigging, animation
+│        (existing high-detail mesh → deformation-prep first)
 └── No → Static pipeline
+```
+
+### Existing Asset Provided?
+```
+User supplies a model file to transform?
+├── YES → Production Mode
+│         → asset-intake (G0) → plan from output-spec (G1, ask user)
+│         → stages enabled by plan.yaml only → gates → web-export/export skill
+└── NO  → New Asset Request tree above
 ```
 
 ## Knowledge Reference
 
-AAA, Blender, MCP, game-ready, technical art, pipeline, production brief, hard surface, prop artist, vehicle artist, environment art, character art, creature art, vegetation, set dressing, hair groom, cloth sim, VFX, physics, camera cinematography, compositing, lookdev, archviz, sculpting, retopology, UV unwrapping, PBR materials, texture baking, geometry nodes, procedural modeling, lighting, Cycles, Eevee, AgX, animation, rigging, LOD, collision proxy, scene assembly, QA review, export, FBX, GLTF, USD, Unity, Unreal, Godot, horror, PSX horror, lowpoly, anime, voxel, isometric, stylized, realistic, reference image match, photo match, silhouette, panel breaks, greebles, blender-mcp, COL_, SM_, MAT_, LGT_, CAM_, ARM_, AN_, UCX_
+AAA, Blender, MCP, game-ready, technical art, pipeline, production brief, hard surface, prop artist, vehicle artist, environment art, character art, creature art, vegetation, set dressing, hair groom, cloth sim, VFX, physics, camera cinematography, compositing, lookdev, archviz, sculpting, retopology, UV unwrapping, PBR materials, texture baking, geometry nodes, procedural modeling, lighting, Cycles, Eevee, AgX, animation, rigging, LOD, collision proxy, scene assembly, QA review, export, FBX, GLTF, USD, Unity, Unreal, Godot, web, three.js, GLB, production mode, output spec, input spec, checkpoint, quality gate, existing asset, horror, PSX horror, lowpoly, anime, voxel, isometric, stylized, realistic, reference image match, photo match, silhouette, panel breaks, greebles, blender-mcp, COL_, SM_, MAT_, LGT_, CAM_, ARM_, AN_, UCX_
