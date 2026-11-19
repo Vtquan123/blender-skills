@@ -9,7 +9,27 @@ Extended routing tables for the Blender Director.
 | Unity | unity-export | GLB/GLTF modern; FBX for humanoid/legacy |
 | Unreal | unreal-export | FBX; UCX collision; verify cm scale |
 | Godot | godot-export | GLTF/GLB preferred |
+| Web (three.js, R3F, Babylon.js, model-viewer) | web-export | GLB + meshopt + KTX2/WebP; ≤ 4 skin influences |
 | Generic / multi | export-pipeline | Confirm axis and scale; then engine skill if known |
+
+## Production Mode (Existing Asset → Deliverable)
+
+| Stage | Lead Skill | Supporting | Gate |
+|-------|------------|-----------|------|
+| Intake / analysis | asset-intake | blender-director | G0 |
+| Plan | blender-director (`production-mode.md`) | asset-intake report | G1 |
+| Geometry (static) | asset-optimization | retopology, blender-modeler | G2 |
+| Geometry (deforming) | deformation-prep | retopology | G4a |
+| UV + bake | uv-workflow + texture-workflow | materials | G3 |
+| Rig + skin | deformation-prep → rigging | animation | G4b, G4c |
+| Animation | animation (`reference-driven-motion.md`) | deformation-prep | G5 |
+| LOD | lod-pipeline | asset-optimization | G2 per level |
+| Web delivery | web-export | export-pipeline | G6, G7 |
+| Engine delivery | unity-export / unreal-export / godot-export | export-pipeline | G6 |
+| Final QA + report | qa-review (`production-gates.md`) | blender-director | G8 |
+
+Category presets (`production/presets/categories/*.yaml`) decide the family:
+`creature` → full deformation path · `articulated_object` → rigid parts + hinges · `static_object` → no rig.
 
 ## By Production Phase
 
@@ -26,7 +46,7 @@ Extended routing tables for the Blender Director.
 | Reference compare | rendering + lighting | visual-match-checklist |
 | Scene layout | scene-assembly + set-dressing | qa-review |
 | Performance | asset-optimization + lod-pipeline | collision-proxy |
-| Delivery | unity-export / unreal-export / godot-export / export-pipeline | qa-review + validation-checklist |
+| Delivery | unity-export / unreal-export / godot-export / web-export / export-pipeline | qa-review + validation-checklist |
 
 ## Style + Discipline Matrix (core)
 
