@@ -71,7 +71,7 @@ CAM_[Asset]_Hero  +  EMPTY_CamTarget_[Subject]
 | Low orbit cinematic | Elevated 3/4, key light from upper-left |
 | Side profile | Orthographic feel: camera perpendicular to longest axis |
 
-**MCP validation:** `get_viewport_screenshot` at Numpad 0 camera view. Compare subject size and angle to reference.
+**MCP validation:** viewport screenshot (`get_screenshot_of_area_as_image`, `VIEW_3D`) at Numpad 0 camera view. Compare subject size and angle to reference.
 
 ## Phase 2 — Geometry Match (Least → Most Detail)
 
@@ -143,7 +143,7 @@ Activate **rendering** skill for pass output and final stills.
 After each phase, capture and compare:
 
 ```
-1. get_viewport_screenshot (or render still at hero camera)
+1. viewport screenshot (`get_screenshot_of_area_as_image`, `VIEW_3D`) (or `render_viewport_to_path` at hero camera)
 2. List GAPS vs reference (max 5 prioritized items)
 3. Fix gaps via MCP
 4. Re-screenshot
@@ -173,8 +173,8 @@ blender-director
 
 ## MCP Execution Checklist
 
-- [ ] `get_scene_info` or audit script — bounds, collections, materials
-- [ ] `get_viewport_screenshot` — baseline before changes
+- [ ] `get_objects_summary` or audit script — bounds, collections, materials
+- [ ] viewport screenshot (`get_screenshot_of_area_as_image`, `VIEW_3D`) — baseline before changes
 - [ ] Reference analysis written
 - [ ] Camera + target empty positioned
 - [ ] Geometry tiers 1→2→3

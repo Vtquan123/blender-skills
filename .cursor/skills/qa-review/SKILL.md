@@ -42,7 +42,7 @@ Gather brief budgets → Screenshot key angles → Run checklists
 4. Material/light beauty
 5. Vs reference (if reference task)
 
-Use `get_viewport_screenshot` via MCP when connected.
+Use the MCP viewport screenshot (`get_screenshot_of_area_as_image`, `VIEW_3D`) when connected; frame first with `jump_to_view3d_object_by_name`.
 
 ## Checklists (load as needed)
 

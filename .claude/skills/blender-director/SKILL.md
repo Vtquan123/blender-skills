@@ -188,7 +188,7 @@ When user provides a photo or render to match:
 
 ```
 1. REFERENCE ANALYSIS  → reference-analysis-template.md (written, before MCP)
-2. BASELINE SCREENSHOT → get_viewport_screenshot
+2. BASELINE SCREENSHOT → get_screenshot_of_area_as_image (VIEW_3D)
 3. CAMERA MATCH        → CAM_* + EMPTY_CamTarget_* before detailing
 4. GEOMETRY TIERS      → silhouette → panel breaks → greebles
 5. MATERIALS           → palette from reference; per-object emissive lights only

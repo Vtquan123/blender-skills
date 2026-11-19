@@ -111,7 +111,7 @@ Collision Planning (if game asset)
 
 ### Look Dev & Reference Compare
 - Lighting pass before declaring materials done
-- `get_viewport_screenshot` at hero camera vs reference
+- viewport screenshot (`get_screenshot_of_area_as_image`, `VIEW_3D`) at hero camera vs reference
 - Run `visual-match-checklist.md` when reference was provided
 
 ### Optimization

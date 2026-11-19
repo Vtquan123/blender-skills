@@ -1,6 +1,6 @@
 # Visual Match Checklist
 
-Run after geometry, materials, lighting, and grading when a **reference image** was provided. Use with `get_viewport_screenshot` or hero camera render.
+Run after geometry, materials, lighting, and grading when a **reference image** was provided. Use with the viewport screenshot (`get_screenshot_of_area_as_image`, `VIEW_3D`) or a hero camera render (`render_viewport_to_path`).
 
 **Pass threshold:** ≥ 8/10 categories rated "Match" or "Close". Document remaining gaps honestly.
 

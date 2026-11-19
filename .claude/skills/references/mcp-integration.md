@@ -2,9 +2,9 @@
 
 When Blender MCP is available, **execute operations through MCP** instead of describing manual UI steps.
 
-**Setup:** See repo `docs/BLENDER_MCP_SETUP.md`. Project config: `.cursor/mcp.json` (Cursor) or `.mcp.json` (Claude Code).
+**Setup:** See repo `docs/BLENDER_MCP_SETUP.md`. The pack targets the official Blender MCP server (Blender Lab add-on, Blender 5.1+); the community `blender-mcp` server also works (tool mapping in `mcp-tools.md`). Verified capabilities: `docs/BLENDER_MCP_CAPABILITIES.md`.
 
-**Tool catalog:** See `mcp-tools.md` for BlenderMCP capabilities and bpy fallbacks.
+**Tool catalog:** See `mcp-tools.md` for tool names, the `result`-dict rule, background (`*_for_cli`) mode and bpy fallbacks.
 
 ## Priority Order
 
@@ -35,7 +35,7 @@ When Blender MCP is available, **execute operations through MCP** instead of des
 3. If reference image attached → reference-analysis-template.md BEFORE step 4
 4. Plan operation sequence (non-destructive first)
 5. Execute step-by-step with validation between steps
-6. get_viewport_screenshot after camera, materials, lighting phases
+6. viewport screenshot (`get_screenshot_of_area_as_image`, `VIEW_3D`) after camera, materials, lighting phases
 7. Report object names, counts, and metrics after each phase
 ```
 
@@ -45,13 +45,20 @@ When matching a photo:
 
 | Step | MCP Tool |
 |------|----------|
-| Baseline | `get_viewport_screenshot` |
+| Baseline | `get_screenshot_of_area_as_image` (`VIEW_3D`) |
 | Audit scene | `execute_blender_code` (bounds, materials, collections) |
 | Camera / geometry / materials / lights | `execute_blender_code` |
-| Compare pass | `get_viewport_screenshot` or render still via bpy |
+| Compare pass | `get_screenshot_of_area_as_image` (`VIEW_3D`) or `render_viewport_to_path` |
 | Save | `execute_blender_code` → `bpy.ops.wm.save_mainfile` |
 
 See `reference-image-match.md` for full workflow and anti-patterns.
+
+## Production Mode Execution
+
+- Check `get_blendfile_summary_path_info` first: if the open file is dirty, do not open/replace files — work in a temporary scene or ask the user.
+- Run repository scripts with `runpy.run_path("<repo>/production/scripts/blender/<stage>.py")["run"](args)`; each returns a dict (assign it to `result`).
+- One stage per call; verify with `get_objects_summary` and a viewport screenshot; write the gate JSON before moving on.
+- Batch work that must not touch the user's session: `execute_blender_code_for_cli` with `BLENDER_PATH` set for the MCP server.
 
 ## Scene Organization via MCP
 

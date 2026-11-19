@@ -115,7 +115,7 @@ When matching a photo/concept (`../references/reference-image-match.md`):
 | Exposure | 0.15–0.45 typical; hull must read, not clip white |
 | Preview playback | EEVEE, motion blur off, `taa_samples` 1–8 |
 | Final still | Render at hero `CAM_*` — compare to reference |
-| Compare tool | `get_viewport_screenshot` or bpy render still |
+| Compare tool | `get_screenshot_of_area_as_image` (`VIEW_3D`) or `render_viewport_to_path` |
 
 Run `../references/visual-match-checklist.md` before delivery.
 
