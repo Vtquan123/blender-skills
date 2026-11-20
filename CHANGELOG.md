@@ -13,6 +13,7 @@ Format: [Semantic Versioning](https://semver.org/) — `Major.Minor.Patch`
 - **New skills:** `asset-intake` (import + measure → input spec, G0), `deformation-prep` (joint analysis, deform mesh with joint loops, rigid parts, template fitting, weights, ROM test — G4a–G4c), `web-export` (glTF-Transform, glTF-Validator, headless three.js check — G6–G7)
 - **Reference-driven motion:** ask for a video/GIF/description when a clip has no source, imitate it with parametric generators (`animation/references/reference-driven-motion.md`)
 - **`production/` toolkit:** spec templates, web presets (mobile/desktop/hero), category presets (human, dog, cat, parrot, book, box, chair, table), bird metarig, Blender scripts run through MCP (`intake`, `rig_fit`, `deform_mesh`, `joint_analysis`, `mesh_metrics`, `bake_maps`, `skin_weights`, `rom_test`, `hinge_rig`, `anim_check`, `export_glb`, `sample_vertices`), motion generators + frame extraction, Node tools (`optimize`, `validate_gltf`, `runtime_check`), gate runner and `project_init`
+- `production/scripts/blender/preview_render.py` — preview clips of a rigged asset in a separate scene (copies, ground, lights, follow camera, root motion, chunked rendering)
 - `scripts/check_skills.py` (pack validator) and `scripts/sync-skills.sh` / `.ps1`
 - `docs/PRODUCTION_MODE.md` — user guide (requirements, decisions, outputs, troubleshooting)
 - `docs/BLENDER_MCP_CAPABILITIES.md` — MCP operations verified on Blender 5.3 plus an end-to-end run on a 1.9 M-triangle model
@@ -29,6 +30,7 @@ Format: [Semantic Versioning](https://semver.org/) — `Major.Minor.Patch`
 ### Fixed
 - `dream-weirdcore-style` related skill `surreal-mood` → `dream-surreal-mood`
 - QUICKSTART plugin install id (`blender-skills@blender-skills`)
+- Walk on short legs (user report: crossing legs, twisted paws): new `quadruped_walk_fk` generator — planar two-bone IK on FK controls with body compensation; generators key `IK_FK` per clip (`ikfk`); `anim_check.py` takes `root_velocity` for in-place cycles; `export_glb.py` unhides objects so a hidden armature is not dropped
 - Found by the end-to-end test and fixed in the scripts: Rigify rig displaced from the mesh (metarig location not applied), twisted control rolls after fitting, "disjoint chain" Rigify errors after moving joints, QuadriFlow refusing small assets, faceted normal bakes, B-Bones breaking Blender↔three.js parity, empty extra glTF scene, missing tangents, work actions exported as clips, ROM test not moving IK limbs, G4b passing collapsed weights, G2/G3 gate files never written
 
 ---

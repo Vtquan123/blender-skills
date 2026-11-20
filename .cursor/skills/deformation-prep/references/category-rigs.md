@@ -54,6 +54,7 @@ Placement rules learned on stylised assets:
 - Put limb joints **inside the visible limb**. On stubby legs the template's hock lands at belly height; move it just above the paw (G4a fails otherwise — the joint has no ring of loops around it).
 - Keep the natural bend direction for IK: quadruped front elbow behind the shoulder–wrist line, hind knee in front of the hip–hock line.
 - Measure before placing: slice the source mesh at a few heights (x-extent jumps where a leg joins the body) and use the slice centroids.
+- Animate stubby legs with FK (`quadruped_walk_fk`), not Rigify IK: see `../../animation/references/reference-driven-motion.md`.
 
 ## Articulated Objects
 

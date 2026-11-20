@@ -51,10 +51,11 @@ The same Blender scripts were run end to end with the `bpy` 5.3.0 wheel (no UI) 
 | UV + bake (basecolor, normal, roughness, metallic, AO, ORM, 2048 px, Metal GPU) | G3 needs_review; 5–20 s per call after the first (kernel compile > 80 s) |
 | Rigify generate + weights G4b | 45 DEF bones, 4 influences, pass |
 | ROM G4c | 10 joint tests recorded (needs_review) |
-| Animation G5 | idle 4 s + walk 1 s, seamless loops, foot slide 2.8 mm |
+| Animation G5 | idle 4 s + walk 1 s (`quadruped_walk_fk`), seamless loops, foot slide 1.3 mm with root motion 0.05 m/s |
 | Export + optimize | 12.9 MB master → 0.94 MB (meshopt + WebP) |
 | G6 validator | 0 errors |
-| G7 three.js (headless Chrome) | 1 draw call, 151 ms load, max vertex deviation 2.4 mm vs Blender |
+| G7 three.js (headless Chrome) | 1 draw call, 162 ms load, max vertex deviation idle 2.4 mm / walk 0.3 mm vs Blender |
+| Preview render | EEVEE 1280×720, 180 frames in ≈ 110 s (3 MCP calls), PNG → MP4 with ffmpeg |
 | G8 | input checksums unchanged; fails until the user approves G1/G4a/G4c and sets thresholds |
 
 Problems found and fixed in the scripts during the run: Rigify rig displaced (unapplied metarig location), twisted control rolls, disjoint Rigify chains after moves, QuadriFlow rejecting sub-0.1 mm edges, faceted normal bake, B-Bones (15 mm Blender↔three.js deviation), empty extra glTF scene, missing tangents, ROM action exported as a clip, IK limbs not moving in the ROM test. See `CHANGELOG.md` 1.4.0.

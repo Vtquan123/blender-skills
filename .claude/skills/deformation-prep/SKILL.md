@@ -51,7 +51,8 @@ Scripts live in `production/scripts/blender/` and expose `run(args) -> dict` (se
 | QuadriFlow "needs to be manifold" on a clean small mesh | Edges under 0.1 mm trip Blender's check; `deform_mesh.py` remeshes an enlarged copy automatically |
 | G4b fails "weights collapsed" (many DEF bones unweighted, head moves with a paw) | The rig does not overlap the mesh — check the generated rig against the mesh; never patch weights by hand first |
 | Normal map shows the quad grid | Target was flat-shaded while baking; `deform_mesh.py` now shades smooth, re-bake normals |
-| Blender and three.js poses differ by centimetres | B-Bone segments on DEF bones; flatten (default in `rig_fit.py`) |
+| Blender and three.js poses differ by centimetres | B-Bone segments on DEF bones; flatten (default in `rig_fit.py`). Only one clip differs → that clip does not key `IK_FK` |
+| Walking legs cross, knees flip, paws twist | Rigify IK on short legs; animate with `quadruped_walk_fk` (planar IK on FK controls) |
 
 Web runtimes use linear blend skinning and read four influences per vertex; design weights for that limit (`web-export`).
 

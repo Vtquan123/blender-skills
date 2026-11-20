@@ -71,6 +71,7 @@ Record an approval: `python3 production/scripts/validation/gates.py approve --pr
 | `reports/report.md` | Gates with values vs thresholds, deliverables, open issues |
 | `reports/gate-*.json` | Machine-readable gate results |
 | `reports/runtime/*.png` | Frames from the headless three.js check |
+| `reports/preview/*.mp4` | Preview clips rendered in Blender (`preview_render.py`) |
 | `checkpoints/NN_stage.blend` | Resume points; the run continues from the last good one |
 
 Example (test run, calico cat): 58 MB / 1.94 M triangles → 0.94 MB / 23.8 k triangles, 45 deform bones, idle + walk, 1 draw call, 2.4 mm max difference between Blender and three.js.
@@ -91,6 +92,9 @@ Example (test run, calico cat): 58 MB / 1.94 M triangles → 0.94 MB / 23.8 k tr
 | `optimize.mjs` exits 3 | KTX2 requested but `ktx` is not installed; install KTX-Software or use WebP |
 | G7 cannot start a browser | Run `npx playwright install chromium` in `production/`, or pass `--chrome` to use installed Chrome |
 | Wrong clip list in the GLB | Pass `clips: [...]` to `export_glb.py`; work actions such as `AN_ROM` are excluded |
+| GLB has no animation / no skin | The armature was not exported; `export_glb.py` now unhides objects and errors if it cannot select them |
+| Walking legs cross, knees flip, paws twist | Rigify IK on short legs; use `quadruped_walk_fk` |
+| One clip differs between Blender and three.js | That clip does not key `IK_FK`; pass `ikfk` to the generator |
 
 ## 7. Limits
 

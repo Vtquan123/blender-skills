@@ -35,7 +35,7 @@ If the source is unusable (subject occluded, camera shaking, too short), say exa
 | Family | Generators | Main parameters |
 |--------|-----------|-----------------|
 | Biped | `biped_walk`, `biped_idle` | cycle_s, stride, lift, arm_swing_deg, breath_deg, sway |
-| Quadruped | `quadruped_walk` (lateral sequence), `quadruped_trot`, `tail_wag` | cycle_s, stride, lift, duty, phases, bounce, body_pitch_deg, head_bob_deg, amp_deg |
+| Quadruped | `quadruped_walk_fk` (lateral sequence, planar two-bone IK on FK controls — default for Rigify quadrupeds), `quadruped_walk` (IK controls), `quadruped_trot`, `tail_wag` | cycle_s, stride, lift, duty, phases, bounce, body_pitch_deg, head_bob_deg, paw_curl_deg, amp_deg |
 | Bird | `wing_flap`, `head_tilt`, `perch_bob` | flaps_per_cycle, amp_deg, tilt_deg, turn_deg, bob |
 | Key poses | `pose_keys` — sit, jump, gestures and anything without a cyclic generator | `keys: [{t, bones: {name: {rot, loc}}}]` |
 | Object | `hinge_open`, `turntable`, `bounce_in` | angle_deg, duration_s, easing, bounces |
@@ -46,9 +46,14 @@ Generators key the **control** bones (IK feet for legs; FK chains for tail/neck)
 - **Layering:** `append: true` keys into an existing action, so one clip can combine generators (idle = `biped_idle` on chest/torso + `tail_wag` + `head_tilt`). Use different bones per layer.
 - **Axes are the control's LOCAL axes.** Read them from the rig before keying (`(rig.matrix_world @ pose_bone.matrix).to_3x3()` columns). Rigify torso/chest/IK controls are world-aligned, so a rig facing +X uses `forward_axis: X`, `forward_negative: false`, `pitch_axis: Y`, `breath_axis: Y`; neck/head/tail controls bend around their X axis (lateral after `rig_fit.py` restores rolls).
 - **Scale parameters to the asset:** stride and lift are metres — a 25 cm kitten walk used stride 0.03, lift 0.012, bounce 0.002.
-- Rigify limbs must be in IK (`IK_FK = 0`, the default) for foot/hand IK keys to drive the legs.
+- **Short or stylised legs: use `quadruped_walk_fk`.** Rigify IK on nearly straight stubby legs picks a different bend plane per frame — knees flip, paws twist, front legs cross (seen on the chibi cat). The FK generator solves each leg in its sagittal plane, keeps the rest bend side, keeps paws level (plus a small swing curl), and compensates body bounce/pitch so planted paws neither sink nor slide.
+- **Key the IK/FK switches in every clip** (`ikfk: {"upper_arm_parent.L": 0.0, ...}` on any generator; `quadruped_walk_fk` keys FK = 1 itself). An unkeyed clip inherits the value the previous clip left, so Blender and the exported GLB disagree (16.7 mm on the cat's idle until keyed).
+- **Root motion for previews:** an in-place cycle moves planted paws back at `stride / (duty × cycle_s)` m/s; move the root at that speed (preview scene or engine) and pass the same value to `anim_check.py` as `root_velocity` so foot slide is measured correctly. Use `contact_eps` well below the lift (0.002 m for a 25 cm animal).
 
 ## 4. Compare and Adjust
+
+Render the clip for review with `production/scripts/blender/preview_render.py` (mode `setup`, then `render` in chunks of ~60 frames; in-place cycles get `root_velocity`), encode the frames to MP4 and put it next to the source video. Check close-ups of the feet as well: crossing legs or twisting paws do not show in a wide shot.
+
 
 1. Render the model at the brief's key-pose times from the source's camera angle → `reports/<clip>_model_sheet.png`.
 2. Build side-by-side sheet source ↔ model.
