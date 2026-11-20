@@ -6,8 +6,10 @@ Blender Skills Pack for Cursor and Claude Code with Blender MCP integration.
 
 ```
 .claude-plugin/          # plugin.json + marketplace.json
-.claude/skills/          # 94 specialist skills + shared references
+.claude/skills/          # 97 specialist skills + shared references
 .cursor/mcp.json         # Blender MCP (Cursor)
+production/              # Production Mode toolkit (specs, presets, rigs, Blender/Node scripts)
+scripts/                 # check_skills.py, sync-skills.sh/.ps1
 docs/BLENDER_MCP_SETUP.md
 ```
 

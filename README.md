@@ -4,12 +4,12 @@
 
 # Blender Skills
 
-**94 Specialized Skills for Blender Artists.**
+**97 Specialized Skills for Blender Artists.**
 **Transform Cursor, Claude Code, Kiro, and Codex into your Senior Technical Art team — not a tutorial bot.**
 
-[![Version](https://img.shields.io/badge/version-1.3.0-blue.svg)](version.json)
+[![Version](https://img.shields.io/badge/version-1.4.0-blue.svg)](version.json)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-[![Skills](https://img.shields.io/badge/skills-94-orange.svg)](.claude/skills/)
+[![Skills](https://img.shields.io/badge/skills-97-orange.svg)](.claude/skills/)
 [![Blender MCP](https://img.shields.io/badge/Blender_MCP-integrated-blueviolet.svg)](docs/BLENDER_MCP_SETUP.md)
 [![Cursor](https://img.shields.io/badge/Cursor-skills-blue.svg)](https://cursor.com)
 [![Claude Code](https://img.shields.io/badge/Claude_Code-plugin-black.svg)](https://docs.anthropic.com/en/docs/claude-code)
@@ -59,9 +59,9 @@ For all installation methods and first steps, see the **[Quick Start Guide](http
 
 ---
 
-## Skills (94)
+## Skills (97)
 
-94 specialized skills across modeling, production, technical, pipeline, art styles, horror packs, worlds, moods, and gameplay genre direction.
+97 specialized skills across modeling, production, technical, pipeline, art styles, horror packs, worlds, moods, gameplay genre direction, and spec-driven production of existing assets (Production Mode).
 
 See **[Skills Guide](SKILLS_GUIDE.md)** for the full list, subtype coverage map, decision trees, and workflow combinations.
 
@@ -85,6 +85,19 @@ The **blender-director** skill analyzes your request and routes automatically:
 → blender-director → retopology → uv-workflow → texture-workflow → rigging
 ```
 
+#### Existing Asset → Web (Production Mode)
+
+Give an existing model and an output spec; the director plans the stages, runs repository scripts in Blender through MCP, and stops at gates for your approval:
+
+```
+"Turn input/calicocat_3d.glb into a web GLB for desktop with idle and walk"
+→ blender-director (Production Mode) → asset-intake → deformation-prep (remesh, joint loops, Rigify, weights, ROM)
+  → texture-workflow (bake from the source) → animation (motion generators, or your video/GIF as reference)
+  → web-export (glTF-Transform, glTF-Validator, headless three.js check) → qa-review (report, gate G8)
+```
+
+Details: [production-mode.md](.claude/skills/blender-director/references/production-mode.md) · toolkit in [`production/`](production/).
+
 #### Reference Image Matching
 
 Attach a photo or concept art and the agent matches it:
@@ -100,6 +113,7 @@ Attach a photo or concept art and the agent matches it:
 | Category | Skills |
 |----------|--------|
 | **Orchestration** | [blender-director](.claude/skills/blender-director/) |
+| **Production Mode** | asset-intake, deformation-prep, web-export |
 | **Modeling** | blender-modeler, hard-surface, prop-artist, vehicle-artist, environment-artist, vegetation-artist, character-artist, creature-artist, character-archetypes |
 | **Production** | sculpting, retopology, uv-workflow, materials, texture-workflow, hair-groom, cloth-sim, lookdev |
 | **Technical** | geometry-nodes, lighting, camera-cinematography, rendering, compositing, animation, rigging, vfx-fx, physics-sim |
@@ -120,24 +134,22 @@ Full paths and workflows: **[SKILLS_GUIDE.md](SKILLS_GUIDE.md)**.
 Every skill executes **directly in Blender** via MCP — no UI walkthroughs, no manual steps.
 
 ```
-Blender (running) ← BlenderMCP addon ← Cursor / Claude Code / Kiro / Codex
+Blender (running, MCP add-on on localhost:9876) ← MCP server ← Cursor / Claude Code / Claude Desktop / Kiro / Codex
 ```
 
-**Setup in 4 steps:**
+**Recommended:** the official Blender Lab **MCP** add-on (Blender 5.1+, *Online Access* enabled in Preferences → System; set `BLENDER_PATH` for the background `*_for_cli` tools).
+**Alternative:** the community [`blender-mcp`](https://github.com/ahujasid/blender-mcp) add-on (sidebar `N` → BlenderMCP → Connect). Both use port 9876 — run one at a time.
 
-1. Install [uv](https://docs.astral.sh/uv/getting-started/installation/)
-2. Install the [BlenderMCP addon](https://github.com/ahujasid/blender-mcp) in Blender
-3. Blender sidebar `N` → **BlenderMCP** → **Connect to Claude**
-4. Restart your agent — Cursor ships `.cursor/mcp.json`; Claude Code uses `.mcp.json`
-
-Full guide: **[docs/BLENDER_MCP_SETUP.md](docs/BLENDER_MCP_SETUP.md)**
+Full guide: **[docs/BLENDER_MCP_SETUP.md](docs/BLENDER_MCP_SETUP.md)** · verified tool list: **[docs/BLENDER_MCP_CAPABILITIES.md](docs/BLENDER_MCP_CAPABILITIES.md)**
 
 | Config / Path | Client |
 |---------------|--------|
 | `.cursor/mcp.json` + `.cursor/skills/` | Cursor |
-| `.mcp.json` + `.claude/skills/` | Claude Code |
+| Your MCP client config (see setup guide) + `.claude/skills/` | Claude Code / Claude Desktop |
 | Kiro skills dir + Blender MCP | Kiro |
 | Codex skills path + Blender MCP | Codex |
+
+The plugin no longer ships a root `.mcp.json` (it only worked on Windows and clashed with the official add-on); configure the server once in your client instead.
 
 ---
 
@@ -166,6 +178,13 @@ blender-director → environment-artist → geometry-nodes
 → uv-workflow → texture-workflow → asset-optimization → export-pipeline
 ```
 
+### Existing Model → Animated Web GLB (Production Mode)
+```
+blender-director → asset-intake → deformation-prep → texture-workflow
+→ animation → web-export → qa-review
+  gates G0–G8, checkpoints, state.json resume; specs in production/templates/
+```
+
 ### Reference Image Match
 ```
 blender-director → reference-image-match.md
@@ -192,20 +211,26 @@ Every skill in this pack:
 
 ```
 .claude-plugin/           # Claude Code plugin manifest
-.claude/skills/           # 94 skills + 175+ reference files
+.claude/skills/           # 97 skills + 188 reference files
   ├── blender-director/
   ├── hard-surface/
   ├── prop-artist/
   ├── genre-shooter/
   ├── sci-fi-punk-worlds/
+  ├── asset-intake/ deformation-prep/ web-export/   # Production Mode
   ├── ... (89 more skills)
   └── references/         # Asset pipeline, naming, MCP tools, checklists
 .cursor/skills/           # Synced mirror for Cursor
 .cursor/mcp.json          # Blender MCP config (Cursor)
-.mcp.json                 # Blender MCP config (Claude Code)
+production/               # Production Mode toolkit: spec templates, presets, rigs,
+                          # Blender scripts (run via MCP), Node web tools, gate runner
+scripts/                  # check_skills.py (pack validator), sync-skills.sh/.ps1
 site/                     # Website (blender-skills.vercel.app)
 docs/
-  └── BLENDER_MCP_SETUP.md
+  ├── BLENDER_MCP_SETUP.md
+  ├── BLENDER_MCP_CAPABILITIES.md
+  ├── PRODUCTION_MODE.md
+  └── local_skill_development.md
 ```
 
 ---
@@ -217,6 +242,10 @@ docs/
 | [QUICKSTART.md](QUICKSTART.md) | Installation and first steps |
 | [SKILLS_GUIDE.md](SKILLS_GUIDE.md) | Skill index, decision trees, workflows |
 | [docs/BLENDER_MCP_SETUP.md](docs/BLENDER_MCP_SETUP.md) | Blender MCP connection guide |
+| [docs/PRODUCTION_MODE.md](docs/PRODUCTION_MODE.md) | User guide: existing model → spec'd deliverable (setup, decisions, outputs, troubleshooting) |
+| [docs/BLENDER_MCP_CAPABILITIES.md](docs/BLENDER_MCP_CAPABILITIES.md) | Verified MCP tools and operations |
+| [production-mode.md](.claude/skills/blender-director/references/production-mode.md) | Spec-driven pipeline for existing assets (modes, gates, resume) |
+| [production-spec.md](.claude/skills/references/production-spec.md) | input-spec / output-spec / plan / motion-brief schemas |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | How to add skills and contribute |
 | [CHANGELOG.md](CHANGELOG.md) | Version history |
 | [.claude/skills/references/](.claude/skills/references/) | Shared pipeline standards |
@@ -264,7 +293,7 @@ MIT License — See [LICENSE](LICENSE) for details.
 
 <div align="center">
 
-**Built for Cursor, Claude Code, Kiro & Codex** | **Blender MCP** | **94 Skills** | **175+ Reference Files**
+**Built for Cursor, Claude Code, Kiro & Codex** | **Blender MCP** | **97 Skills** | **188 Reference Files**
 
 Inspired by [jeffallan/claude-skills](https://github.com/Jeffallan/claude-skills)
 

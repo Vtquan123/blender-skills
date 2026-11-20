@@ -37,13 +37,42 @@ Which Blender operations the Universal 3D Production pipeline can drive through 
 
 The same Blender scripts were run end to end with the `bpy` 5.3.0 wheel (no UI) on synthetic assets: intake, joint analysis, deform mesh + joint-loop cuts, metrics, bake (basecolor/normal/roughness/metallic/AO + ORM pack), auto weights, ROM test, motion generator, anim check, GLB export, vertex sampling, Rigify generate (basic human, custom bird), hinge rig. Node tools (glTF-Transform 4.5.1, glTF-Validator 2.0.0-dev.3.10, three.js 0.187 in headless Chrome) passed G6/G7 with 1.4 mm max vertex deviation between Blender and three.js.
 
+## End-to-End Run on a Real Asset (Phase 7)
+
+`calicocat_3d.glb` (Tripo, 1,939,832 triangles, 0.25 m) → animated web GLB through the official MCP, every stage a repository script run with `runpy`. Spec = presets `web-desktop` + `cat` (test values), clips idle + walk.
+
+| Stage | Result |
+|-------|--------|
+| Intake G0 | pass, 13.6 s |
+| Rig fit (paw fit, prune 174 → 33 bones, traced tail, overrides) | joints inside the limbs; user approval pending |
+| Deform mesh (QuadriFlow + joint loops) | 11,924 quads / 23,840 tris, manifold, 1 component, 27–35 s |
+| G4a joint loops | all 20 joints meet their rule (needs_review) |
+| G2 geometry | silhouette p95 0.21 mm; max 13 mm (whiskers lost) |
+| UV + bake (basecolor, normal, roughness, metallic, AO, ORM, 2048 px, Metal GPU) | G3 needs_review; 5–20 s per call after the first (kernel compile > 80 s) |
+| Rigify generate + weights G4b | 45 DEF bones, 4 influences, pass |
+| ROM G4c | 10 joint tests recorded (needs_review) |
+| Animation G5 | idle 4 s + walk 1 s, seamless loops, foot slide 2.8 mm |
+| Export + optimize | 12.9 MB master → 0.94 MB (meshopt + WebP) |
+| G6 validator | 0 errors |
+| G7 three.js (headless Chrome) | 1 draw call, 151 ms load, max vertex deviation 2.4 mm vs Blender |
+| G8 | input checksums unchanged; fails until the user approves G1/G4a/G4c and sets thresholds |
+
+Problems found and fixed in the scripts during the run: Rigify rig displaced (unapplied metarig location), twisted control rolls, disjoint Rigify chains after moves, QuadriFlow rejecting sub-0.1 mm edges, faceted normal bake, B-Bones (15 mm Blender↔three.js deviation), empty extra glTF scene, missing tangents, ROM action exported as a clip, IK limbs not moving in the ROM test. See `CHANGELOG.md` 1.4.0.
+
+| MCP behaviour | Handling |
+|---------------|----------|
+| `bpy.ops.screen.screenshot_area` from code writes a 1×1 PNG | Use `render.opengl` + `save_render` (`references/mcp-tools.md → Images and Long Calls`) |
+| Calls over ~80 s time out on the client while Blender continues | Poll for output files; do not resend |
+| Viewport screenshot can be one frame stale after `frame_set` | Redraw (`wm.redraw_timer`) before the screenshot |
+
 ## Not Yet Verified
 
 | Item | Why |
 |------|-----|
 | KTX2 texture compression | KTX-Software `ktx` CLI not installed on the test machines (`optimize.mjs` stops with a clear message) |
 | Draco output | Not exercised; meshopt is the default |
-| Full Production Mode on the 2 M-triangle models (remesh, bake, rig) | Next phase (integration test on representative assets) |
+| Production Mode on dog, parrot (bird template + wing decision) and the leaping cat (non-neutral pose) | Only the calico cat ran end to end; parrot/leaping-cat decisions are open |
+| Playwright's own Chromium on the user's machine | Download blocked in the test VM; G7 ran with installed Chrome (`--chrome`) |
 | `*_for_cli` tools | Requires `BLENDER_PATH` |
 
 ## Re-running the Probe

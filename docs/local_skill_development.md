@@ -121,6 +121,13 @@ Select-String -Path ".claude/skills/my-skill/SKILL.md" -Pattern "name:|descripti
 
 Always sync after changes:
 
+```bash
+bash scripts/sync-skills.sh        # macOS / Linux (rsync --delete when available)
+pwsh scripts/sync-skills.ps1       # Windows (robocopy /MIR)
+```
+
+Manual alternative:
+
 ```powershell
 Copy-Item -Recurse -Force ".claude\skills\*" ".cursor\skills\"
 ```
@@ -135,7 +142,13 @@ git add ".cursor\skills\"
 
 ## Validating Before Commit
 
-Manually check:
+Run the pack checker (frontmatter fields, `name` = folder, related skills exist, referenced paths resolve, `.cursor` mirror identical):
+
+```bash
+python3 scripts/check_skills.py              # add --sections to also list missing schema sections
+```
+
+Then check by hand:
 
 - [ ] Frontmatter has all required fields (`name`, `description`, `author`, `triggers`, `role`, `related-skills`)
 - [ ] Description follows formula: `Use when [...]. Invoke for [...].`

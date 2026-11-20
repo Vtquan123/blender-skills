@@ -1,6 +1,6 @@
 # Blender Skills Guide
 
-Decision trees and workflow combinations for the Blender Skills Pack (**94 skills**).
+Decision trees and workflow combinations for the Blender Skills Pack (**97 skills**).
 
 ## Start Here
 
@@ -8,12 +8,19 @@ For any Blender asset task, **blender-director** analyzes the request and routes
 
 **User attached a reference photo?** Start with **blender-director** → read `references/reference-image-match.md` → fill `references/reference-analysis-template.md` before any Blender work.
 
+**Already have a model and need a specific deliverable (web GLB, animated, budgets)?** Start with **blender-director** in **Production Mode** (`blender-director/references/production-mode.md`): it measures the asset, writes a plan, runs repository scripts through MCP and stops at approval gates.
+
 **Genre / style / mood / world?** Director routes to a pack skill; open that skill’s `references/` for subtype details (e.g. steampunk under `sci-fi-punk-worlds`, Backrooms under `liminal-space-style`).
 
 ## Skill Index
 
 ### Orchestration
 - **blender-director** — Pipeline planning, skill routing, production briefs
+
+### Production Mode (existing asset → output spec)
+- **asset-intake** — Import and measure any source (GLB/FBX/OBJ/USD/STL/PLY/.blend) → input-spec, gate G0
+- **deformation-prep** — Joint analysis, deform mesh with joint loops, rigid parts, template fitting, weights, ROM test (G4a–G4c)
+- **web-export** — Master GLB → glTF-Transform (meshopt, KTX2/WebP) → glTF-Validator → headless three.js check (G6–G7)
 
 ### Modeling Disciplines
 - **blender-modeler** — General modeling, scene organization, modifiers
@@ -99,6 +106,18 @@ Mood (cozy, gritty, vaporwave, brutalist, …) → mood skill
 Console/media era (PS1, CRT, VHS, …) → visual-console-eras
 Gameplay genre (FPS, JRPG, soulslike, city builder, …) → genre-* skill
 Unspecified → blender-director infers from context
+```
+
+### Existing asset in, deliverable out?
+
+```
+Model + output spec → blender-director (Production Mode)
+  Static object, too dense → asset-intake → asset-optimization / retopology → texture-workflow (bake) → export
+  Creature / character to animate → asset-intake → deformation-prep → texture-workflow → animation → export
+  Book / box / lid / folding chair → asset-intake → deformation-prep (rigid parts + hinge_rig.py) → animation
+  Table / static prop with motion → node animation (turntable, appear) — no rig
+  Clip has no source → ask for video / GIF / description (animation/references/reference-driven-motion.md)
+  Web target → web-export ; engine target → unity/unreal/godot-export
 ```
 
 ### Pipeline stage?
@@ -217,6 +236,18 @@ blender-director → reference-image-match.md
   → visual-match-checklist → qa-review
 ```
 
+### Existing Model → Animated Web GLB (Production Mode)
+```
+blender-director (ANALYZE → PLAN → PRODUCTION → EXPORT)
+  → asset-intake (G0) → plan.yaml (G1, approve)
+  → deformation-prep: rig_fit → deform_mesh → joint_analysis (G4a, approve)
+  → texture-workflow: UV + bake_maps from the source (G3)
+  → rig generate → skin_weights (G4b) → rom_test (G4c, approve)
+  → animation: motion generators / reference video (G5)
+  → web-export: export_glb → optimize → validate (G6) → runtime_check (G7)
+  → qa-review: report.md + gates.py final (G8)
+```
+
 ## Shared References
 
 | Reference | Path |
@@ -229,6 +260,8 @@ blender-director → reference-image-match.md
 | Naming Conventions | `.claude/skills/references/naming-conventions.md` |
 | Validation Checklist | `.claude/skills/references/validation-checklist.md` |
 | Polycount Budgets | `.claude/skills/references/polycount-budgets.md` |
+| Production Spec Schemas | `.claude/skills/references/production-spec.md` |
+| MCP Tools (official + community) | `.claude/skills/references/mcp-tools.md` |
 
 ## Naming Quick Reference
 
