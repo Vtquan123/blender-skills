@@ -33,8 +33,8 @@ A creature/character technical director who rebuilds topology for deformation, d
 4. **Deform mesh** — automatic quad base (QuadriFlow or an installed remesher) at the spec budget, then enforce joint loop rules (`references/joint-loop-rules.md`; `deform_mesh.py`); shrinkwrap to source. **Gate G4a (user approves wireframe per joint).**
 5. **Surface** — UV with seams away from bend areas; bake normal/AO (and colour if UVs changed) from the source via `texture-workflow` (`bake_maps.py`).
 6. **Rig** — fit and generate the template from `references/category-rigs.md` (`rig_fit.py`, `generate: true` after approval); add twist bones on long limbs; export deform bones only.
-7. **Skin** — automatic weights on the clean deform mesh; rigid parts 1.0; weight transfer for accessories; limit to `budgets.max_influences` (web: 4), normalize, smooth, clean tiny weights (`skin_weights.py`). **Gate G4b.** Folds where a limb meets a chubby body (front leg ↔ chest): `transfers` in `skin_weights.py` move limb weight to a body bone beyond a plane (or inside a region of several planes; `to` may list bones, nearest wins) with a soft falloff, before smoothing. Measure the effect over the clip (minimum edge-length ratio against rest) — on the cat a chest transfer helped slightly, a belly transfer made it worse; large strides on short, round legs still crease.
-8. **ROM test** — generate the range-of-motion action, measure volume loss, stretch, intersections, twist collapse; contact sheet of worst poses (`references/rom-test.md`; `rom_test.py`). **Gate G4c (user approves).** Failing joints loop back to step 4, 6 or 7.
+7. **Skin** — automatic weights on the clean deform mesh; rigid parts 1.0; weight transfer for accessories; limit to `budgets.max_influences` (web: 4), normalize, smooth, clean tiny weights (`skin_weights.py`). **Gate G4b.** Chubby bodies with short legs: add half-rotation helpers at the hips and shoulders before skinning (`helper_bones.py`) and pass `refine` to `skin_weights.py` (`references/limb-junctions.md`).
+8. **ROM test** — generate the range-of-motion action, measure volume loss, stretch, intersections, twist collapse; contact sheet of worst poses (`references/rom-test.md`; `rom_test.py`). **Gate G4c (user approves).** Failing joints loop back to step 4, 6 or 7. Then check the skin under the real clips with `deform_check.py` (folds, flipped faces, collapsed edges per clip, clustered with their weights) — a walk moves four legs at once and creases where single-joint ROM does not.
 
 Scripts live in `production/scripts/blender/` and expose `run(args) -> dict` (see `../blender-director/references/production-mode.md` §6).
 
@@ -44,6 +44,7 @@ Scripts live in `production/scripts/blender/` and expose `run(args) -> dict` (se
 |---------|-----|
 | Elbow/knee collapses when bent | More loops at the joint (3 + supports), check weight gradient |
 | Wrist/forearm "candy-wrapper" on twist | Twist bones splitting rotation; loops along the segment |
+| Belly, armpit or groin folds/flips while walking (chubby body, short legs) | Half-rotation helpers at limb roots + `refine` (`helpers`, `helper_upper_share`, side split); measure with `deform_check.py` (`references/limb-junctions.md`) |
 | Hard accessory bends with skin | Make it a rigid part weighted 1.0 to one bone |
 | Wing/limb fused to body must open | Separate geometry and rebuild hidden surface + texture — ask the user first |
 | Action pose (leap) as bind pose | Ask: rig as-is, re-pose to neutral (expect cleanup), or neutral asset from the user |
