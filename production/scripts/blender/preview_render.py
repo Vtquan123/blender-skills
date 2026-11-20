@@ -20,6 +20,10 @@ args (mode "setup"):
     engine         (str)             "BLENDER_EEVEE" (default) or "CYCLES"
     background     (list[float])     world colour RGB 0-1 (match a reference video), default light blue-grey
     ground_colors  (list[list])      two RGB checker colours; [c, c] for a plain floor
+    follow_bone    (str, optional)   camera, look-at target and fill light follow this bone horizontally (clips
+                                     whose root really travels: a thrown ball, a driving car); height stays fixed
+                                     so hops stay visible. The ground grows with the travel (action["u3d_travel_m"])
+    checker_m      (float, optional) checker square size (default 10 % of the asset, larger for long travel)
 args (mode "render"):
     scene          (str, required)
     out_dir        (str, required)   frames are written as <out_dir>/<prefix>NNNN.png
@@ -157,13 +161,22 @@ def setup(args):
         rig.location = (0.0, 0.0, 0.0)
 
     # framing from the rest-pose bbox
+    # framing and ground from the REST pose of the source (its current frame may be mid-air or mid-stride)
+    prev_pp = src_rig.data.pose_position
+    src_rig.data.pose_position = "REST"
+    for vl in src_scene.view_layers:
+        vl.update()
     mn, mx = C.world_bbox(meshes)
+    src_rig.data.pose_position = prev_pp
+    for vl in src_scene.view_layers:
+        vl.update()
     mn, mx = Vector(mn), Vector(mx)
     size = max((mx - mn).length, 1e-3)
     centre = (mn + mx) / 2
+    travel = float(act.get("u3d_travel_m", 0.0)) if args.get("follow_bone") else 0.0
 
     ground_mesh = bpy.data.meshes.new(f"{PREFIX}ground")
-    g = 4.0 * size + vel.length * frame_end / fps * 2
+    g = 4.0 * size + vel.length * frame_end / fps * 2 + 4.0 * travel + (25.0 * size if travel else 0.0)
     ground_mesh.from_pydata([(-g, -g, 0), (g, -g, 0), (g, g, 0), (-g, g, 0)], [], [(0, 1, 2, 3)])
     ground_mesh.uv_layers.new()
     ground = bpy.data.objects.new(f"{PREFIX}ground", ground_mesh)
@@ -174,7 +187,8 @@ def setup(args):
     nt = mat.node_tree
     bsdf = next(n for n in nt.nodes if n.type == "BSDF_PRINCIPLED")
     chk = nt.nodes.new("ShaderNodeTexChecker")
-    chk.inputs["Scale"].default_value = 2 * g / (0.2 * size)   # squares ≈ 10 % of the asset size
+    sq_m = float(args.get("checker_m") or max(0.1 * size, travel / 30.0))
+    chk.inputs["Scale"].default_value = 2 * g / (2 * sq_m)      # squares ≈ 10 % of the asset size by default
     c1, c2 = args.get("ground_colors") or ((0.62, 0.60, 0.56), (0.52, 0.50, 0.47))
     chk.inputs["Color1"].default_value = (*c1, 1)
     chk.inputs["Color2"].default_value = (*c2, 1)
@@ -201,15 +215,25 @@ def setup(args):
     bg.inputs["Strength"].default_value = 0.9
     sc.world = world
 
+    anchor = rig
+    if args.get("follow_bone"):
+        if args["follow_bone"] not in rig.pose.bones:
+            return C.result_error(f"follow_bone {args['follow_bone']} not in the rig")
+        anchor = bpy.data.objects.new(f"{PREFIX}follow", None)
+        sc.collection.objects.link(anchor)
+        cl = anchor.constraints.new("COPY_LOCATION")
+        cl.target, cl.subtarget, cl.use_z = rig, args["follow_bone"], False
+        fill.parent = anchor
     target = bpy.data.objects.new(f"{PREFIX}target", None)
-    target.parent = rig
-    target.location = Vector(args["target_offset"]) if args.get("target_offset") else centre
+    target.parent = anchor
+    base = centre if anchor is rig else Vector((0.0, 0.0, centre.z))   # the follow anchor already sits at the bone
+    target.location = Vector(args["target_offset"]) if args.get("target_offset") else base
     sc.collection.objects.link(target)
     cam_d = bpy.data.cameras.new(f"{PREFIX}cam")
     cam_d.lens = 50
     cam = bpy.data.objects.new(f"{PREFIX}cam", cam_d)
-    cam.parent = rig
-    cam.location = Vector(args["camera_offset"]) if args.get("camera_offset") else centre + Vector((1.1, -2.4, 0.5)) * size * 1.0
+    cam.parent = anchor
+    cam.location = Vector(args["camera_offset"]) if args.get("camera_offset") else base + Vector((1.1, -2.4, 0.5)) * size * 1.0
     tt = cam.constraints.new("TRACK_TO")
     tt.target, tt.track_axis, tt.up_axis = target, "TRACK_NEGATIVE_Z", "UP_Y"
     sc.collection.objects.link(cam)

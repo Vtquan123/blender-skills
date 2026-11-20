@@ -10,7 +10,9 @@ Format: [Semantic Versioning](https://semver.org/) — `Major.Minor.Patch`
 
 ### Added
 - **Any model, analysis first:** `production/scripts/blender/structure_analysis.py` measures parts, shape classes, ground contacts, a skeleton of protrusions, symmetry and wheels (separate or fused) without names or presets, scores motion archetypes (rigid_whole, rigid_parts, chain_flex, skinned, morph) and generates only the questions the measurement cannot settle (`blender-director/references/motion-analysis.md`)
-- **New motion types:** `rigid_rig.py` (ball: roll/squash/spin; vehicle: body, wheels, steering, optional cut of fused wheels), `chain_rig.py` (plants, snakes, ropes along the measured skeleton), generators `ball_roll`, `ball_bounce`, `vehicle_drive`, `wind_sway`
+- **New motion types:** `rigid_rig.py` (ball: roll/squash/spin; vehicle: body, wheels, steering, optional cut of fused wheels), `chain_rig.py` (plants, snakes, ropes along the measured skeleton), generators `ball_roll`, `ball_bounce`, `ball_throw` (drop/toss, bounces away, rolls to a stop), `vehicle_drive`, `wind_sway`
+- `preview_render.py`: `follow_bone` for clips whose root travels (camera follows horizontally, ground grows with the travel), `checker_m`; framing taken from the rest pose
+- Test asset: procedural baseball (regulation size, seam and 108 chevron stitches)
 - `skin_weights.py`: distance-weight fallback when bone heat fails
 - `production/tests/`: procedural test assets (ball, car as parts and fused, tree, chest, snake) with `run_structure_tests.py` and `run_rig_tests.py`
 

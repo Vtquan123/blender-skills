@@ -7,7 +7,7 @@ three.js (production/scripts/validation/runtime_check.mjs --samples <asset>_samp
 args:
     assets_dir  (str, required)   where make_test_assets.py wrote the GLBs
     out_dir     (str, required)   GLBs + samples + JSON summary
-    assets      (list, optional)  subset of ball, car_parts, car_fused, tree_fused, snake_fused
+    assets      (list, optional)  subset of ball, baseball, car_parts, car_fused, tree_fused, snake_fused
     keep_scenes (bool, False)
 """
 import json
@@ -23,6 +23,8 @@ M = os.path.join(HERE, "..", "scripts", "motion", "generators.py")
 PLANS = {
     "ball": {"rig": ("rigid", {"kind": "ball"}),
              "clips": [("AN_roll", "ball_roll", 2.0, {"speed": 0.6}), ("AN_bounce", "ball_bounce", 1.0, {"height": 0.25})]},
+    "baseball": {"rig": ("rigid", {"kind": "ball", "forward": "X"}),
+                 "clips": [("AN_drop_bounce", "ball_throw", 1.0, {"drop_height": 1.0, "speed": 1.2, "restitution": 0.55})]},
     "car_parts": {"rig": ("rigid", {"kind": "vehicle", "forward": "X"}),
                   "clips": [("AN_drive", "vehicle_drive", 2.0, {"speed": 0.8}), ("AN_turn", "vehicle_drive", 2.0, {"speed": 0.5, "steer_deg": 20})]},
     "car_fused": {"rig": ("rigid", {"kind": "vehicle", "forward": "X", "split_wheels": True}),

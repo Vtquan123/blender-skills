@@ -26,7 +26,7 @@ Categories do not scale: a model can be a toy car, a robot dog, a potted plant o
 
 | Archetype / subtype | Typical models | Rig (script) | Clips (generators.py) | Checks |
 |---------------------|----------------|--------------|-----------------------|--------|
-| `rigid_whole/round` | Ball, marble, fruit, planet | `rigid_rig.py kind=ball`: root → squash → spin, mesh on the spin bone | `ball_roll` (no slip, whole turns in loops), `ball_bounce` (squash/stretch, volume kept) | Roll: contact point speed = root speed; bounce touches the ground |
+| `rigid_whole/round` | Ball, marble, fruit, planet | `rigid_rig.py kind=ball`: root → squash → spin, mesh on the spin bone | `ball_roll` (no slip, whole turns in loops), `ball_bounce` (squash/stretch, volume kept), `ball_throw` (drop or toss: falls, bounces away with restitution and friction, rolls to a stop) | Roll: contact point speed = root speed; bounce touches the ground; preview with `preview_render.py follow_bone: root` |
 | `rigid_whole/prop` | Box, statue, bottle, toy, gadget | Object or one root bone | `turntable`, `bounce_in`, hover (`pose_keys`) | G6/G7 |
 | `rigid_parts/vehicle` | Car, cart, train, tank, bike | `rigid_rig.py kind=vehicle`: root → body; steer → wheel bones | `vehicle_drive` (`speed`, `steer_deg`, `bob_m`, `lean_deg`, `in_place`) | Wheel spin vs speed (no skid), steering only on front wheels |
 | `rigid_parts/hinged` | Chest, book, laptop, door, drawer | `hinge_rig.py` (pivot on the hinge edge the user names) | `hinge_open` | Limits; parts do not intersect at the limit |

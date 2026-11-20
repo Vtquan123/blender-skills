@@ -523,6 +523,81 @@ def ball_bounce(rig, b, p, fps, cyc, loop):
         ball_roll(rig, b, {**p, "in_place": True}, fps, cyc, loop)
 
 
+def ball_throw(rig, b, p, fps, cyc, loop):
+    """Drop or toss a ball forward: it falls, bounces away with shrinking hops, then rolls to a stop.
+
+    Ballistic flight under gravity; each impact keeps `restitution` of the vertical speed and loses `friction`
+    of the horizontal speed; spin follows the travel (rolling after each contact, constant in the air); a short
+    squash at each impact grows with the impact speed (`squash_per_mps`, capped at `squash_max`), with a slight
+    stretch along the vertical while moving fast. The root really travels (not in place); the clip ends when
+    the ball has stopped (or at `max_s`) and holds `hold_s`.
+    params: drop_height (m above the ground, ball bottom; default 1.0), speed (m/s forward at release, 1.2),
+            up_speed (m/s upward at release, 0), restitution (0.55 — baseball on hard ground ~0.5),
+            friction (0.12), rolling_decel (m/s², 0.6), min_hop (m, 0.002), squash_max (0.18),
+            squash_per_mps (0.04), contact_s (0.05), stretch (0.06), gravity (9.81), max_s (6), hold_s (0.4)."""
+    m = _rigid_meta(rig)
+    r = float(m["radius"])
+    root = rig.pose.bones[m["root_bone"]]; sq = rig.pose.bones[m["squash_bone"]]; spin = rig.pose.bones[m["spin_bone"]]
+    g = float(p.get("gravity", 9.81))
+    z, x = float(p.get("drop_height", 1.0)), 0.0
+    vz, vx = float(p.get("up_speed", 0.0)), float(p.get("speed", 1.2))
+    e, mu = float(p.get("restitution", 0.55)), float(p.get("friction", 0.12))
+    decel, min_hop = float(p.get("rolling_decel", 0.6)), float(p.get("min_hop", 0.002))
+    sq_max, sq_k, contact = float(p.get("squash_max", 0.18)), float(p.get("squash_per_mps", 0.04)), float(p.get("contact_s", 0.05))
+    stretch_k = float(p.get("stretch", 0.06))
+    dt = 1.0 / fps
+    t, ang, w = 0.0, 0.0, vx / r                 # spin rate: start as if rolling (a thrown ball would carry its own)
+    impacts = []                                  # (time, impact speed)
+    rolling = False
+    samples = []
+    max_t = float(p.get("max_s", 6.0))
+    while t <= max_t:
+        samples.append((t, x, z, ang, abs(vz)))
+        # integrate one frame in small steps (impacts inside a frame)
+        sub = 8
+        for _ in range(sub):
+            h = dt / sub
+            if rolling:
+                vx = max(0.0, vx - decel * h)
+                w = vx / r
+            else:
+                vz -= g * h
+                z += vz * h
+                if z <= 0.0 and vz < 0:
+                    impacts.append((t, -vz))
+                    z = 0.0
+                    vz = -vz * e
+                    vx *= (1 - mu)
+                    w = vx / r                   # friction at contact brings the spin to rolling
+                    if vz * vz / (2 * g) < min_hop:
+                        vz = 0.0
+                        rolling = True
+            x += vx * h
+            ang += w * h
+        t += dt
+        if rolling and vx <= 1e-4:
+            break
+    hold = int(round(float(p.get("hold_s", 0.4)) * fps))
+    samples += [(samples[-1][0] + (k + 1) * dt, x, 0.0, ang, 0.0) for k in range(hold)]
+    for i, (ti, xi, zi, ai, vzi) in enumerate(samples):
+        fr = 1 + i
+        key_loc(root, (0.0, zi, xi), fr)         # root local Y = up, Z = forward
+        key_rot(spin, (0.0, math.degrees(ai), 0.0), fr)
+        s_up = 1.0
+        for (tc, vi) in impacts:
+            dc = abs(ti - tc)
+            if dc < contact:
+                k = math.cos(0.5 * math.pi * dc / contact)
+                s_up = min(s_up, 1 - min(sq_max, sq_k * vi) * k)
+        if s_up == 1.0 and zi > 0.0:
+            s_up = 1 + stretch_k * min(vzi / 4.0, 1.0)
+        side = 1 / math.sqrt(s_up)
+        key_scale(sq, (side, s_up, side), fr)
+    act = rig.animation_data.action
+    act["u3d_impacts"] = [round(a, 4) for a, _ in impacts]
+    act["u3d_travel_m"] = round(x, 4)
+
+
 def vehicle_drive(rig, b, p, fps, cyc, loop):
     """Drive: speed (m/s); wheels spin from their own radius (loop clips round each wheel to whole turns);
     steer_deg (front wheels, constant; + = left); body bob_m / bob_hz, pitch_deg (nose dips/rises with the bob),
@@ -605,7 +680,7 @@ GENERATORS = {
     "biped_idle": biped_idle, "tail_wag": tail_wag, "wing_flap": wing_flap, "head_tilt": head_tilt,
     "perch_bob": perch_bob, "pose_keys": pose_keys,
     "turntable": turntable, "hinge_open": hinge_open, "bounce_in": bounce_in,
-    "ball_roll": ball_roll, "ball_bounce": ball_bounce, "vehicle_drive": vehicle_drive, "wind_sway": wind_sway,
+    "ball_roll": ball_roll, "ball_bounce": ball_bounce, "ball_throw": ball_throw, "vehicle_drive": vehicle_drive, "wind_sway": wind_sway,
 }
 OBJECT_GENERATORS = {"turntable", "hinge_open", "bounce_in"}
 
@@ -636,7 +711,7 @@ def run(args: dict) -> dict:
         return C.result_error("target object not found")
     fps = int(args.get("fps", 30))
     cyc = float(args.get("cycle_s", 1.0))
-    loop = bool(args.get("loop", gen not in ("hinge_open", "bounce_in")))
+    loop = bool(args.get("loop", gen not in ("hinge_open", "bounce_in", "ball_throw")))
     bpy.context.scene.render.fps = fps
     ad = target.animation_data or target.animation_data_create()
     name = args.get("action") or f"AN_{gen}"

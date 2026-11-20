@@ -194,8 +194,70 @@ def snake_fused(sc):
     ob.data.materials.append(_mat("M_snake", (0.4, 0.6, 0.2)))
 
 
+def baseball(sc):
+    """Regulation size (Ø 73.2 mm): white leather sphere, the seam on the tennis-ball curve (exactly on the
+    sphere), a shallow seam bead and 108 red stitches in a herringbone — one object, two materials, like a
+    scanned or AI-made asset."""
+    import bmesh
+    R = 0.0366
+    alpha = 0.2                                     # seam shape
+    k2 = 2 * math.sqrt(alpha * (1 - alpha))
+
+    def seam(t):
+        return Vector(((1 - alpha) * math.cos(t) + alpha * math.cos(3 * t),
+                       (1 - alpha) * math.sin(t) - alpha * math.sin(3 * t),
+                       k2 * math.sin(2 * t)))
+
+    bm = _prim("sphere", r=R, sub=5)
+    for f in bm.faces:
+        f.material_index = 0
+    # seam bead: small tube following the curve
+    n = 240
+    pts = [seam(2 * math.pi * i / n) * (R * 1.0005) for i in range(n)]
+    rb, seg = 0.0006, 6
+    rings = []
+    for i, p in enumerate(pts):
+        tng = (pts[(i + 1) % n] - pts[i - 1]).normalized()
+        nrm = p.normalized()
+        bin_ = nrm.cross(tng).normalized()
+        rings.append([bm.verts.new(p + (nrm * math.cos(2 * math.pi * j / seg) + bin_ * math.sin(2 * math.pi * j / seg)) * rb) for j in range(seg)])
+    for i in range(n):
+        for j in range(seg):
+            f = bm.faces.new((rings[i][j], rings[(i + 1) % n][j], rings[(i + 1) % n][(j + 1) % seg], rings[i][(j + 1) % seg]))
+            f.material_index = 0
+    # 108 double stitches: each a chevron from one stitch hole across the seam centre to the other side (">>>")
+    ns = 108
+
+    def bar(a, b_):
+        d = b_ - a
+        m = Matrix.Translation((a + b_) / 2) @ d.to_track_quat("Z", "Y").to_matrix().to_4x4()
+        sb = _prim("cyl", r1=0.0005, depth=d.length + 0.0008, seg=6, matrix=m)
+        tmp = bpy.data.meshes.new("tmp_stitch"); sb.to_mesh(tmp); sb.free()
+        nv = [bm.verts.new(v.co) for v in tmp.vertices]
+        for poly in tmp.polygons:
+            f = bm.faces.new([nv[i] for i in poly.vertices])
+            f.material_index = 1
+        bpy.data.meshes.remove(tmp)
+
+    for k in range(ns):
+        t = 2 * math.pi * (k + 0.5) / ns
+        p = seam(t) * R
+        tng = (seam(t + 1e-3) - seam(t - 1e-3)).normalized()
+        nrm = p.normalized()
+        bin_ = nrm.cross(tng).normalized()
+        lift = nrm * 0.00025
+        left, right = p + bin_ * 0.0045 + lift, p - bin_ * 0.0045 + lift
+        tip = p + tng * 0.0022 + lift
+        bar(left, tip)
+        bar(tip, right)
+    ob = _obj(sc, "Object_1", bm)
+    ob.data.materials.append(_mat("M_leather", (0.92, 0.9, 0.85)))
+    ob.data.materials.append(_mat("M_stitch", (0.75, 0.06, 0.05)))
+    ob.location = (0, 0, R)
+
+
 BUILDERS = {"ball": ball, "car_parts": car_parts, "car_fused": car_fused, "tree_fused": tree_fused,
-            "chest_parts": chest_parts, "snake_fused": snake_fused}
+            "chest_parts": chest_parts, "snake_fused": snake_fused, "baseball": baseball}
 
 
 def run(args: dict) -> dict:

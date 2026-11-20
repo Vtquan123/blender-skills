@@ -14,6 +14,7 @@ EXPECT = {
     "tree_fused": {"archetype": "chain_flex", "subtype": "plant"},
     "chest_parts": {"archetype": "rigid_parts", "subtype": "hinged", "question": "hinge"},
     "snake_fused": {"archetype": "chain_flex", "subtype": "body_chain"},
+    "baseball": {"archetype": "rigid_whole", "subtype": "round"},
 }
 
 
