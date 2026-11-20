@@ -24,6 +24,9 @@ args:
                                  joints shared: the parent's tail and children starting at the same point follow.
     generate    (bool, False)    run Rigify generate (after the user approved joint placement)
     flatten_bbones (bool, True)  after generate, set deform bones to 1 B-Bone segment (glTF cannot carry B-Bones)
+    paw_auto_track (bool, False) keep Rigify's paw auto-tracking (DAMPED_TRACK on MCH-*_track); off by default
+                                 because it moves the paw away from the bind pose in IK
+    Rigify is always generated facing -Y (its paw helpers use world axes) and the result is turned to `forward`.
     metarig     (str, optional)  existing metarig name (skip creation and fit; prune/snap/trace/overrides still apply)
 
     fix_rolls   (bool, True)     re-align bone rolls to the template's X axes after fitting (see restore_rolls)
@@ -464,6 +467,7 @@ def run(args: dict) -> dict:
         rig.name = f"metarig_{mesh.name}"  # Rigify names the generated rig "rig_<mesh>"
         forward = args.get("forward", "-Y")
         rig["u3d_x_ref"] = template_x_axes(rig, forward)  # kept on the metarig for later runs
+        rig["u3d_forward"] = forward
         fit = args.get("fit") or ("feet" if args.get("template") in QUAD_TEMPLATES else "height")
         if fit == "feet":
             scale = fit_feet(rig, mesh, forward)
@@ -487,13 +491,45 @@ def run(args: dict) -> dict:
         if rig.matrix_world != Matrix.Identity(4):
             _apply(rig, rotation=True, scale=True, location=True)  # see note above: Rigify ignores the object transform
             out["applied_metarig_transform"] = True
+        # Rigify builds some helper bones along WORLD axes assuming the character faces -Y (paw heel/track
+        # bones of limbs.front_paw / rear_paw). Generate in that orientation and turn the result afterwards,
+        # otherwise a +X-facing quadruped gets its paw IK targets pulled sideways (both paws skew to one side).
+        forward = args.get("forward") or rig.get("u3d_forward", "-Y")
+        turn = FORWARD_ROT.get(forward, 0.0)
+        if abs(turn) > 1e-9:
+            rig.rotation_euler = (0.0, 0.0, -turn)
+            bpy.context.view_layer.update()
+            _apply(rig, rotation=True)
         bpy.context.view_layer.objects.active = rig
         before = set(bpy.data.objects)
-        bpy.ops.pose.rigify_generate()
+        try:
+            bpy.ops.pose.rigify_generate()
+        finally:
+            if abs(turn) > 1e-9:
+                rig.rotation_euler = (0.0, 0.0, turn)
+                bpy.context.view_layer.update()
+                _apply(rig, rotation=True)
         gen = [o for o in bpy.data.objects if o not in before and o.type == "ARMATURE"]
         out["rig"] = gen[0].name if gen else rig.data.get("rigify_target_rig", None)
+        if gen and abs(turn) > 1e-9:
+            gen[0].rotation_euler = (0.0, 0.0, turn)
+            bpy.context.view_layer.update()
+            _apply(gen[0], rotation=True)
+            out["generated_in_rigify_orientation"] = forward
         if gen:
             out["deform_bones"] = sum(1 for b in gen[0].data.bones if b.use_deform)
+            if not args.get("paw_auto_track", False):
+                # Rigify paws (limbs.front_paw) turn the heel toward the leg with a DAMPED_TRACK (influence 0.8)
+                # that is not neutral at rest: in IK the paw rest pose is off by ~4 mm at the paw and 15 mm at
+                # the forearm on the cat. Off by default so IK, FK and the bind pose agree.
+                n = 0
+                for pb in gen[0].pose.bones:
+                    if pb.name.startswith("MCH-") and "_track" in pb.name:
+                        for c in pb.constraints:
+                            if c.type == "DAMPED_TRACK" and c.influence > 0:
+                                c.influence = 0.0
+                                n += 1
+                out["paw_track_disabled"] = n
             if args.get("flatten_bbones", True):
                 # glTF/three.js have no B-Bones: Rigify's segmented DEF bones (8-10 segments) make Blender deform
                 # differently from the exported file (15 mm on a 25 cm cat). Flatten so Blender shows what ships.
