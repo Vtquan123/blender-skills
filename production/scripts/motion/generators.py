@@ -169,7 +169,13 @@ def quadruped_walk_fk(rig, b, p, fps, cyc, loop):
             "body": torso, "head": head, "ikfk": ["upper_arm_parent.L", ...]}  (IK_FK keyed to 1.0 = FK)
     params: as quadruped_walk (stride, lift, duty, phases with keys foot_fl/fr/hl/hr, bounce, body_pitch_deg,
             pitch_axis, head_bob_deg, head_axis) + forward_axis ("X", "-X", "Y", "-Y" in rig space), paw_curl_deg,
-            paw_curl_sign (+1/-1: flip if the paw curls upward instead of tucking during swing).
+            paw_curl_sign (+1/-1: flip if the paw curls upward instead of tucking during swing),
+            cycles (leg cycles per clip), lift_front / lift_hind, paw_curl_front / paw_curl_hind,
+            swing_lift_peak[_front|_hind] (0.5 = symmetric arc; lower = lift early, then reach forward low).
+    Leave "head" out of bones when a chain_curve layer animates the head (both would key the same channel).
+    A leg given as 4 bones [shoulder, upper, lower, paw] with scapula_share > 0 (e.g. 0.35) lets the shoulder
+    blade take that share of the swing — fewer folds where a chubby chest meets the front leg. Only for rigs whose
+    shoulder control carries the limb; Rigify's shoulder does not (FK_limb_follow), so keep 0 there.
     """
     stride, lift, duty = p.get("stride", 0.3), p.get("lift", 0.05), p.get("duty", 0.6)
     phases = p.get("phases", {"foot_hl": 0.0, "foot_fl": 0.25, "foot_hr": 0.5, "foot_fr": 0.75})
@@ -178,6 +184,15 @@ def quadruped_walk_fk(rig, b, p, fps, cyc, loop):
     U = Vector((0.0, 0.0, 1.0))
     lat = U.cross(F)
     curl = math.radians(p.get("paw_curl_deg", 15.0))
+    share = float(p.get("scapula_share", 0.0))
+    cycles = max(1, int(p.get("cycles", 1)))          # leg cycles inside one clip (long clips with slow layers)
+    lift_fh = {"front": p.get("lift_front", lift), "hind": p.get("lift_hind", lift)}
+    curl_fh = {"front": math.radians(p.get("paw_curl_front", math.degrees(curl))),
+               "hind": math.radians(p.get("paw_curl_hind", math.degrees(curl)))}
+    # swing_lift_peak: where the lift peaks inside the swing (0.5 symmetric; 0.35 = lift early, then reach forward low)
+    peak_fh = {"front": p.get("swing_lift_peak_front", p.get("swing_lift_peak", 0.5)),
+               "hind": p.get("swing_lift_peak_hind", p.get("swing_lift_peak", 0.5))}
+    expo_fh = {k: math.log(0.5) / math.log(min(max(v, 0.05), 0.95)) for k, v in peak_fh.items()}
     frames = frames_for(fps, cyc, loop)
     n = len(frames) - (1 if loop else 0)
     legs = {}
@@ -186,10 +201,15 @@ def quadruped_walk_fk(rig, b, p, fps, cyc, loop):
         if not names:
             continue
         pbs = [rig.pose.bones[nm] for nm in names]
-        S, E, W = (pb.bone.head_local.copy() for pb in pbs)
+        if len(pbs) == 4:   # [scapula/shoulder, upper, lower, paw]
+            P0 = pbs[0].bone.head_local.copy()
+            S, E, W = (pb.bone.head_local.copy() for pb in pbs[1:])
+        else:
+            P0 = None
+            S, E, W = (pb.bone.head_local.copy() for pb in pbs)
         # local X of each control in armature space: sign of its rotation relative to `lat`
         signs = [1.0 if pb.bone.matrix_local.to_3x3().col[0].dot(lat) >= 0 else -1.0 for pb in pbs]
-        legs[role] = (pbs, S, E, W, signs, phases.get(key, 0.0))
+        legs[role] = (pbs, S, E, W, signs, phases.get(key, 0.0), "front" if role.startswith("leg_f") else "hind", P0)
     for nm in b.get("ikfk", []):
         pb = rig.pose.bones[nm]
         for fr in (frames[0], frames[-1]):
@@ -198,7 +218,8 @@ def quadruped_walk_fk(rig, b, p, fps, cyc, loop):
     from mathutils import Matrix
     body = rig.pose.bones[b["body"]] if b.get("body") else None
     for i, fr in enumerate(frames):
-        u = (i % n) / n
+        u_clip = (i % n) / n
+        u = (u_clip * cycles) % 1.0
         bounce = p.get("bounce", 0.01) * math.sin(4 * math.pi * u)
         pitch = p.get("body_pitch_deg", 2.0) * math.sin(2 * math.pi * u)
         # body pose as a rigid transform in armature space; paw targets stay on the ground, so they are
@@ -215,26 +236,88 @@ def quadruped_walk_fk(rig, b, p, fps, cyc, loop):
             key_loc(body, [0, 0, bounce], fr)
             key_rot(body, axis_vec(p.get("pitch_axis", "X"), pitch), fr)
         Mb_inv = Mb.inverted()
-        for role, (pbs, S, E, W, signs, ph) in legs.items():
+        for role, (pbs, S, E, W, signs, ph, fh, P0) in legs.items():
             s_ = (u + ph) % 1.0
             if s_ < duty:
                 k = s_ / duty
                 along, up, c = stride * (0.5 - k), 0.0, 0.0
             else:
                 k = (s_ - duty) / (1 - duty)
-                along, up = stride * (-0.5 + ease(k)), lift * math.sin(math.pi * k)
-                c = curl * math.sin(math.pi * k)
+                ks = k ** expo_fh[fh]
+                along, up = stride * (-0.5 + ease(k)), lift_fh[fh] * math.sin(math.pi * ks)
+                c = curl_fh[fh] * math.sin(math.pi * ks)
             T = Mb_inv @ (W + F * along + U * up)
-            E2, T = _two_bone_plane(S, E, W, T, lat)
-            th_u = _signed_angle(E - S, E2 - S, lat)
-            th_l_world = _signed_angle(W - E, T - E2, lat)
+            th_s = 0.0
+            S1, E1, W1 = S, E, W
+            if P0 is not None and share > 0:
+                # the scapula takes part of the swing (cats slide the shoulder blade): solve once, rotate the
+                # shoulder by share x upper-arm angle, then solve the arm again from the moved shoulder joint
+                E2, _ = _two_bone_plane(S, E, W, T, lat)
+                th_s = share * _signed_angle(E - S, E2 - S, lat)
+                R = Matrix.Rotation(th_s, 3, lat)
+                S1, E1, W1 = (P0 + R @ (v - P0) for v in (S, E, W))
+            E2, T = _two_bone_plane(S1, E1, W1, T, lat)
+            th_u = _signed_angle(E1 - S1, E2 - S1, lat)
+            th_l_world = _signed_angle(W1 - E1, T - E2, lat)
             th_l = th_l_world - th_u
-            th_p = -th_l_world - body_pitch_lat + c * p.get("paw_curl_sign", 1.0)
-            for pb, ang, sg in zip(pbs, (th_u, th_l, th_p), signs):
+            th_p = -(th_s + th_l_world) - body_pitch_lat + c * p.get("paw_curl_sign", 1.0)
+            angles = (th_s, th_u, th_l, th_p) if P0 is not None else (th_u, th_l, th_p)
+            for pb, ang, sg in zip(pbs, angles, signs):
                 key_rot(pb, [math.degrees(sg * ang), 0.0, 0.0], fr)
         if b.get("head"):
             key_rot(rig.pose.bones[b["head"]],
                     axis_vec(p.get("head_axis", "X"), p.get("head_bob_deg", 3) * math.sin(4 * math.pi * u + 0.5)), fr)
+
+
+def _smooth(x):
+    return x * x * (3 - 2 * x)
+
+
+def chain_curve(rig, b, p, fps, cyc, loop):
+    """Slow pose envelope + rhythmic oscillation on control bones, keyed together (one rotation key per bone
+    per frame), so a tail can rise and fall over the clip while swaying with every step, or a head can turn
+    while bobbing — layers that would overwrite each other as separate generators.
+
+    params:
+      keys: [{"t": seconds, "rot": {bone: [x, y, z]}}]   envelope poses (degrees, control's local axes);
+            smoothstep between keys; a bone missing from a key is at rest there; loops return to the first key
+      osc:  [{"bones": [...], "axis": "Z", "amp_deg": 4, "cycles": 4, "phase_step": 0.05, "phase": 0.0}]
+            sine per bone; cycles = periods per clip; phase_step delays each next bone (follow-through)
+    Rigify tail controls copy their parent's rotation, so a rotation on tail.001 bends the whole tail.
+    """
+    keys = sorted(p.get("keys", []), key=lambda k: k["t"])
+    oscs = p.get("osc", [])
+    bones = sorted({bn for k in keys for bn in k.get("rot", {})} | {bn for o in oscs for bn in o["bones"]})
+    if loop and keys and keys[-1]["t"] < cyc:
+        keys = keys + [{"t": cyc, "rot": keys[0].get("rot", {})}]
+    frames = frames_for(fps, cyc, loop)
+    n = len(frames) - (1 if loop else 0)
+
+    def envelope(bn, t):
+        if not keys:
+            return [0.0, 0.0, 0.0]
+        if t <= keys[0]["t"]:
+            return list(keys[0].get("rot", {}).get(bn, [0.0, 0.0, 0.0]))
+        for a, c in zip(keys, keys[1:]):
+            if a["t"] <= t <= c["t"]:
+                w = _smooth((t - a["t"]) / max(c["t"] - a["t"], 1e-9))
+                ra = a.get("rot", {}).get(bn, [0.0, 0.0, 0.0])
+                rc = c.get("rot", {}).get(bn, [0.0, 0.0, 0.0])
+                return [ra[i] + (rc[i] - ra[i]) * w for i in range(3)]
+        return list(keys[-1].get("rot", {}).get(bn, [0.0, 0.0, 0.0]))
+
+    for i, fr in enumerate(frames):
+        u = (i % n) / n
+        t = u * cyc
+        for bn in bones:
+            rot = envelope(bn, t)
+            for o in oscs:
+                if bn in o["bones"]:
+                    k = o["bones"].index(bn)
+                    ang = o.get("amp_deg", 5.0) * math.sin(
+                        2 * math.pi * (o.get("cycles", 1) * u - k * o.get("phase_step", 0.0) - o.get("phase", 0.0)))
+                    rot[AX[o.get("axis", "Z")]] += ang
+            key_rot(rig.pose.bones[bn], rot, fr)
 
 
 def quadruped_trot(rig, b, p, fps, cyc, loop):
@@ -375,7 +458,7 @@ def _linear(ob):
 
 
 GENERATORS = {
-    "quadruped_walk": quadruped_walk, "quadruped_walk_fk": quadruped_walk_fk, "quadruped_trot": quadruped_trot, "biped_walk": biped_walk,
+    "quadruped_walk": quadruped_walk, "quadruped_walk_fk": quadruped_walk_fk, "chain_curve": chain_curve, "quadruped_trot": quadruped_trot, "biped_walk": biped_walk,
     "biped_idle": biped_idle, "tail_wag": tail_wag, "wing_flap": wing_flap, "head_tilt": head_tilt,
     "perch_bob": perch_bob, "pose_keys": pose_keys,
     "turntable": turntable, "hinge_open": hinge_open, "bounce_in": bounce_in,

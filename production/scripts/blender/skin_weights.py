@@ -13,6 +13,14 @@ args:
     max_influences  (int, 4)
     clean_threshold (float, 0.01)
     smooth_iterations (int, 0)       optional weight smoothing passes (all groups)
+    transfers       (list[dict])     move weight from limb bones to a body bone on one side of a plane, e.g. the
+                                     chest skin of a chubby animal that auto weights gave to the upper arm:
+                                     [{"from": ["DEF-upper_arm.L", "DEF-upper_arm.L.001"], "to": "DEF-spine.003",
+                                       "point": [0, 0, -0.072], "normal": [0, 0, 1], "falloff": 0.02}]
+                                     (world metres; full transfer at `falloff` beyond the plane, smoothstep between).
+                                     Region of several planes: "planes": [{"point", "normal", "falloff"}, ...];
+                                     "to" may be a list (nearest bone wins), e.g. belly skin between front and
+                                     hind legs → ["DEF-spine.001", "DEF-spine.002", "DEF-spine.003"]
     project_dir     (str, optional)  write reports/gate-G4b.json
 """
 import importlib.util
@@ -48,10 +56,74 @@ def _activate(*objs):
     bpy.context.view_layer.objects.active = objs[-1]
 
 
-def auto_weights(mesh, arm, rigid_groups, max_inf, clean, smooth):
+def apply_transfers(mesh, transfers, arm=None):
+    """Move weight from `from` bones to body bone(s) inside a region bounded by planes.
+
+    Each transfer: {"from": [...], "to": bone | [bones], "planes": [{"point", "normal", "falloff"}]}
+    (or a single "point"/"normal"/"falloff"). A vertex is inside when it is on the normal side of every plane;
+    the amount moved is the product of smoothsteps over each plane's falloff, so the region has soft edges.
+    With a list in "to", each vertex goes to the nearest of those bones (needs the armature)."""
+    from mathutils import Vector
+    from mathutils.geometry import intersect_point_line
+    mw = mesh.matrix_world
+    report = []
+    for t in transfers or []:
+        planes = t.get("planes") or [{"point": t["point"], "normal": t.get("normal", (0, 0, 1)),
+                                      "falloff": t.get("falloff", 0.02)}]
+        planes = [(Vector(pl["point"]), Vector(pl.get("normal", (0, 0, 1))).normalized(),
+                   max(float(pl.get("falloff", 0.02)), 1e-6)) for pl in planes]
+        targets = t["to"] if isinstance(t["to"], (list, tuple)) else [t["to"]]
+        segs = []
+        if len(targets) > 1:
+            if arm is None:
+                raise ValueError("transfer to several bones needs the armature")
+            amw = arm.matrix_world
+            segs = [(n, amw @ arm.data.bones[n].head_local, amw @ arm.data.bones[n].tail_local) for n in targets]
+        dst = {n: (mesh.vertex_groups.get(n) or mesh.vertex_groups.new(name=n)) for n in targets}
+        src = {g.index: g for g in (mesh.vertex_groups.get(n) for n in t["from"]) if g is not None}
+        moved = 0
+        for v in mesh.data.vertices:
+            p = mw @ v.co
+            k = 1.0
+            for P, N, fall in planes:
+                d = (p - P).dot(N)
+                if d <= 0:
+                    k = 0.0
+                    break
+                x = min(d / fall, 1.0)
+                k *= x * x * (3 - 2 * x)
+            if k <= 0:
+                continue
+            take = 0.0
+            for ge in v.groups:
+                g = src.get(ge.group)
+                if g is not None and ge.weight > 0:
+                    w = ge.weight * k
+                    g.add([v.index], ge.weight - w, "REPLACE")
+                    take += w
+            if take <= 0:
+                continue
+            if segs:
+                def dist(seg):
+                    q, f = intersect_point_line(p, seg[1], seg[2])
+                    f = min(max(f, 0.0), 1.0)
+                    return (p - (seg[1] + (seg[2] - seg[1]) * f)).length
+                name = min(segs, key=dist)[0]
+            else:
+                name = targets[0]
+            g = dst[name]
+            cur = next((ge.weight for ge in v.groups if ge.group == g.index), 0.0)
+            g.add([v.index], cur + take, "REPLACE")
+            moved += 1
+        report.append({"to": targets, "verts": moved})
+    return report
+
+
+def auto_weights(mesh, arm, rigid_groups, max_inf, clean, smooth, transfers=None):
     _activate(mesh, arm)
     bpy.ops.object.parent_set(type="ARMATURE_AUTO")
     deform = {b.name for b in arm.data.bones if b.use_deform}
+    apply_transfers(mesh, transfers, arm)
     # rigid vertex sets: weight 1.0 to one bone, 0 elsewhere
     for vg_name, bone in (rigid_groups or {}).items():
         src = mesh.vertex_groups.get(vg_name)
@@ -123,7 +195,8 @@ def run(args: dict) -> dict:
     out = {}
     if args.get("mode", "check") == "auto":
         auto_weights(mesh, arm, args.get("rigid_groups"), max_inf,
-                     float(args.get("clean_threshold", 0.01)), int(args.get("smooth_iterations", 0)))
+                     float(args.get("clean_threshold", 0.01)), int(args.get("smooth_iterations", 0)),
+                     args.get("transfers"))
         out["rigid_objects"] = attach_rigid_objects(arm, args.get("rigid_parts"))
     m = check(mesh, arm, max_inf)
     notes = []

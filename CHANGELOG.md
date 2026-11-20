@@ -14,6 +14,7 @@ Format: [Semantic Versioning](https://semver.org/) — `Major.Minor.Patch`
 - **Reference-driven motion:** ask for a video/GIF/description when a clip has no source, imitate it with parametric generators (`animation/references/reference-driven-motion.md`)
 - **`production/` toolkit:** spec templates, web presets (mobile/desktop/hero), category presets (human, dog, cat, parrot, book, box, chair, table), bird metarig, Blender scripts run through MCP (`intake`, `rig_fit`, `deform_mesh`, `joint_analysis`, `mesh_metrics`, `bake_maps`, `skin_weights`, `rom_test`, `hinge_rig`, `anim_check`, `export_glb`, `sample_vertices`), motion generators + frame extraction, Node tools (`optimize`, `validate_gltf`, `runtime_check`), gate runner and `project_init`
 - `production/scripts/blender/preview_render.py` — preview clips of a rigged asset in a separate scene (copies, ground, lights, follow camera, root motion, chunked rendering)
+- Reference-driven walk from a GIF (cat): `chain_curve` generator for slow tail/head layers with per-step oscillations; `quadruped_walk_fk` gains `cycles`, per-end lift and paw curl, and `swing_lift_peak` (lift early, reach forward low); `skin_weights.py` `transfers` move limb weight to body bones beyond a plane or inside a region; `preview_render.py` `background` / `ground_colors` to match a source backdrop
 - `scripts/check_skills.py` (pack validator) and `scripts/sync-skills.sh` / `.ps1`
 - `docs/PRODUCTION_MODE.md` — user guide (requirements, decisions, outputs, troubleshooting)
 - `docs/BLENDER_MCP_CAPABILITIES.md` — MCP operations verified on Blender 5.3 plus an end-to-end run on a 1.9 M-triangle model
@@ -32,6 +33,8 @@ Format: [Semantic Versioning](https://semver.org/) — `Major.Minor.Patch`
 - QUICKSTART plugin install id (`blender-skills@blender-skills`)
 - Front paws skewed to one side (user report): Rigify paw helpers assume a -Y-facing character; `rig_fit.py` now generates in that orientation and turns the rig back, and disables Rigify's paw auto-tracking (not neutral at rest) — IK and FK rest poses match the bind pose
 - Walk on short legs (user report: crossing legs, twisted paws): new `quadruped_walk_fk` generator — planar two-bone IK on FK controls with body compensation; generators key `IK_FK` per clip (`ikfk`); `anim_check.py` takes `root_velocity` for in-place cycles; `export_glb.py` unhides objects so a hidden armature is not dropped
+- `preview_render.py` cleared the copied rig's animation data and with it Rigify's drivers, so previews showed nearly static legs; it now keeps the drivers and refuses a copy whose drivers still point at the source rig
+- `sample_vertices.py` resets the pose before each clip — a bone keyed only in an earlier clip kept that value in the Blender samples (15 mm false difference on the cat walk tail in G7)
 - Found by the end-to-end test and fixed in the scripts: Rigify rig displaced from the mesh (metarig location not applied), twisted control rolls after fitting, "disjoint chain" Rigify errors after moving joints, QuadriFlow refusing small assets, faceted normal bakes, B-Bones breaking Blender↔three.js parity, empty extra glTF scene, missing tangents, work actions exported as clips, ROM test not moving IK limbs, G4b passing collapsed weights, G2/G3 gate files never written
 
 ---
