@@ -457,11 +457,155 @@ def _linear(ob):
                 kp.interpolation = "LINEAR"
 
 
+def _rigid_meta(rig):
+    import json
+    raw = rig.get("u3d_rigid")
+    if not raw:
+        raise ValueError("rig has no u3d_rigid metadata (build it with rigid_rig.py)")
+    return json.loads(raw)
+
+
+def _set_root_velocity(rig, v_world):
+    act = rig.animation_data.action
+    act["u3d_root_velocity"] = [float(x) for x in v_world]
+
+
+def ball_roll(rig, b, p, fps, cyc, loop):
+    """Roll without slipping. speed (m/s); in_place (default true: the root stays, the clip records the root
+    velocity for previews/engines); loop clips round the spin to whole turns and adjust the speed to match."""
+    m = _rigid_meta(rig)
+    r = float(p.get("radius", m["radius"]))
+    spin = rig.pose.bones[m["spin_bone"]]
+    root = rig.pose.bones[m["root_bone"]]
+    dist = float(p.get("speed", 0.5)) * cyc
+    if loop:
+        turns = max(1, round(dist / (2 * math.pi * r)))
+        dist = turns * 2 * math.pi * r
+    frames = frames_for(fps, cyc, loop)
+    n = len(frames) - (1 if loop else 0)
+    for i, fr in enumerate(frames):
+        u = i / n
+        key_rot(spin, (0.0, math.degrees(dist * u / r), 0.0), fr)       # spin bone Y = left axis = up × forward
+        if not p.get("in_place", True):
+            key_loc(root, (0.0, 0.0, dist * u), fr)                     # root local Z = forward
+    _set_root_velocity(rig, [c * dist / cyc for c in m["forward"]])
+
+
+def ball_bounce(rig, b, p, fps, cyc, loop):
+    """Bounce in place: height (m), bounces (per clip), squash (0.25 = 25 % shorter on contact), stretch (in the
+    air, near contact). Volume kept (side scale = 1/sqrt(up scale)). Optional speed rolls it forward too."""
+    m = _rigid_meta(rig)
+    r = float(m["radius"])
+    root = rig.pose.bones[m["root_bone"]]; sq = rig.pose.bones[m["squash_bone"]]
+    h = float(p.get("height", 2 * r)); nb = max(1, int(p.get("bounces", 1)))
+    squash, stretch = float(p.get("squash", 0.25)), float(p.get("stretch", 0.12))
+    contact = float(p.get("contact_s", 0.06))
+    frames = frames_for(fps, cyc, loop)
+    n = len(frames) - (1 if loop else 0)
+    for i, fr in enumerate(frames):
+        u = (i / n) * nb % 1.0
+        t = u * cyc / nb                         # time inside this bounce
+        T = cyc / nb
+        z = h * 4 * u * (1 - u)
+        # squash around the contact (u near 0/1), stretch while moving fast just after/before it
+        dc = min(t, T - t)
+        if dc < contact / 2:
+            k = math.cos(math.pi * dc / contact)  # 1 at contact → 0 at the edge of the contact window
+            s_up = 1 - squash * k
+            z = 0.0
+        else:
+            speed = abs(1 - 2 * u)               # 1 at the ground, 0 at the apex
+            s_up = 1 + stretch * speed ** 2
+        side = 1 / math.sqrt(s_up)
+        key_loc(root, (0.0, z, 0.0), fr)         # root local Y = up
+        key_scale(sq, (side, s_up, side), fr)    # squash local Y = up
+    if p.get("speed"):
+        ball_roll(rig, b, {**p, "in_place": True}, fps, cyc, loop)
+
+
+def vehicle_drive(rig, b, p, fps, cyc, loop):
+    """Drive: speed (m/s); wheels spin from their own radius (loop clips round each wheel to whole turns);
+    steer_deg (front wheels, constant; + = left); body bob_m / bob_hz, pitch_deg (nose dips/rises with the bob),
+    lean_deg (roll into the turn); in_place (default true, root velocity recorded); with in_place false and
+    steering, the root follows the turning circle (bicycle model)."""
+    m = _rigid_meta(rig)
+    speed = float(p.get("speed", 1.0))
+    frames = frames_for(fps, cyc, loop)
+    n = len(frames) - (1 if loop else 0)
+    steer = float(p.get("steer_deg", 0.0))
+    bob, bob_hz = float(p.get("bob_m", 0.002)), float(p.get("bob_hz", 3.0))
+    bob_cycles = max(1, round(bob_hz * cyc)) if loop else bob_hz * cyc
+    pitch, lean = float(p.get("pitch_deg", 0.4)), float(p.get("lean_deg", 0.0))
+    if steer and not lean:
+        lean = -0.15 * steer                        # body rolls away from the turn centre
+    body = rig.pose.bones[m["body_bone"]]
+    root = rig.pose.bones[m["root_bone"]]
+    spins = []
+    for w in m["wheels"]:
+        r = float(w["radius"]); d = speed * cyc
+        turns = d / (2 * math.pi * r)
+        if loop:
+            turns = max(1, round(turns))
+        sign = 1.0 if w["left"] else -1.0          # left wheel bone Y = left; right wheel bone Y = right
+        spins.append((rig.pose.bones[w["bone"]], sign * turns * 360.0, rig.pose.bones[w["steer"]] if w.get("steer") else None))
+    wb = float(m.get("wheelbase") or 0.0)
+    yaw_rate = speed * math.tan(math.radians(steer)) / wb if (wb > 0 and steer) else 0.0
+    x = z = yaw = 0.0
+    dt = cyc / n
+    for i, fr in enumerate(frames):
+        u = i / n
+        for pb, total, st in spins:
+            key_rot(pb, (0.0, total * u, 0.0), fr)
+            if st is not None:
+                key_rot(st, (0.0, steer, 0.0), fr)
+        ph = 2 * math.pi * bob_cycles * u
+        key_loc(body, (0.0, bob * math.sin(ph), 0.0), fr)
+        key_rot(body, (pitch * math.sin(ph + 0.6), 0.0, lean), fr)
+        if not p.get("in_place", True):
+            key_loc(root, (x, 0.0, z), fr)
+            key_rot(root, (0.0, math.degrees(yaw), 0.0), fr)
+            yaw += yaw_rate * dt
+            z += speed * math.cos(yaw) * dt; x += speed * math.sin(yaw) * dt
+    _set_root_velocity(rig, [c * speed for c in m["forward"]])
+
+
+def wind_sway(rig, b, p, fps, cyc, loop):
+    """Plants, hair, flags, tails at rest: every chain in bones["chains"] bends with the wind. amp_deg at the tip
+    (root bones move less: amp × ((i+1)/n)^taper), sway_cycles per clip (loop-safe), gust (0..1) adds a faster
+    second wave, axis ("X"/"Z" or both "XZ"), phase_step delays each bone, per-chain phase spreads the chains."""
+    chains = b.get("chains") or []
+    if not chains and rig.get("u3d_chains"):
+        import json
+        chains = json.loads(rig["u3d_chains"])          # built by chain_rig.py
+    amp = float(p.get("amp_deg", 6.0)); taper = float(p.get("taper", 1.3))
+    cyc_n = max(1, int(p.get("sway_cycles", 1))) if loop else float(p.get("sway_cycles", 1))
+    gust = float(p.get("gust", 0.35)); axes = p.get("axis", "XZ"); step = float(p.get("phase_step", 0.06))
+    frames = frames_for(fps, cyc, loop)
+    n = len(frames) - (1 if loop else 0)
+    for ci, ch in enumerate(chains):
+        names = ch["bones"] if isinstance(ch, dict) else ch
+        ph0 = (ch.get("phase") if isinstance(ch, dict) else None)
+        ph0 = (ci * 0.37) % 1.0 if ph0 is None else ph0
+        k = len(names)
+        for j, bn in enumerate(names):
+            pb = rig.pose.bones[bn]
+            a = amp * ((j + 1) / k) ** taper / k * 2.0
+            for i, fr in enumerate(frames):
+                u = i / n
+                t = 2 * math.pi * (cyc_n * u - ph0 - j * step)
+                main = math.sin(t)
+                fast = math.sin(3 * t + 1.3) * gust
+                rx = a * (main + fast) if "X" in axes else 0.0
+                rz = a * 0.5 * (math.sin(t + 1.9) + 0.6 * fast) if "Z" in axes else 0.0
+                key_rot(pb, (rx, 0.0, rz), fr)
+
+
 GENERATORS = {
     "quadruped_walk": quadruped_walk, "quadruped_walk_fk": quadruped_walk_fk, "chain_curve": chain_curve, "quadruped_trot": quadruped_trot, "biped_walk": biped_walk,
     "biped_idle": biped_idle, "tail_wag": tail_wag, "wing_flap": wing_flap, "head_tilt": head_tilt,
     "perch_bob": perch_bob, "pose_keys": pose_keys,
     "turntable": turntable, "hinge_open": hinge_open, "bounce_in": bounce_in,
+    "ball_roll": ball_roll, "ball_bounce": ball_bounce, "vehicle_drive": vehicle_drive, "wind_sway": wind_sway,
 }
 OBJECT_GENERATORS = {"turntable", "hinge_open", "bounce_in"}
 

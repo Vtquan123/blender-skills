@@ -292,10 +292,43 @@ def refine_limbs(mesh, arm, opts):
     return moved
 
 
-def auto_weights(mesh, arm, rigid_groups, max_inf, clean, smooth, transfers=None, refine=None):
+def distance_weights(mesh, arm, power=4.0, max_inf=4):
+    """Fallback when bone heat fails (open, self-intersecting or fused meshes): weight ∝ 1 / distance^power to
+    each deform bone segment, top `max_inf`, normalised. Smooth afterwards."""
+    import numpy as np
+    me = mesh.data
+    nv = len(me.vertices)
+    co = np.empty(nv * 3); me.vertices.foreach_get("co", co); co = co.reshape(-1, 3)
+    mw = np.array(mesh.matrix_world); P = co @ mw[:3, :3].T + mw[:3, 3]
+    amw = arm.matrix_world
+    bones = [b for b in arm.data.bones if b.use_deform]
+    D = np.empty((nv, len(bones)))
+    for j, b in enumerate(bones):
+        a = np.array(amw @ b.head_local); t = np.array(amw @ b.tail_local); ab = t - a
+        u = np.clip(((P - a) @ ab) / max(ab @ ab, 1e-12), 0, 1)
+        D[:, j] = np.linalg.norm(P - (a + u[:, None] * ab), axis=1)
+    W = 1.0 / np.maximum(D, 1e-5) ** power
+    keep = np.argsort(-W, axis=1)[:, :max_inf]
+    mask = np.zeros_like(W, dtype=bool); np.put_along_axis(mask, keep, True, axis=1)
+    W = np.where(mask, W, 0); W /= W.sum(1, keepdims=True)
+    for j, b in enumerate(bones):
+        g = mesh.vertex_groups.get(b.name) or mesh.vertex_groups.new(name=b.name)
+        g.remove(list(range(nv)))
+        for vi in np.nonzero(W[:, j] > 1e-4)[0]:
+            g.add([int(vi)], float(W[vi, j]), "REPLACE")
+
+
+def auto_weights(mesh, arm, rigid_groups, max_inf, clean, smooth, transfers=None, refine=None, method="auto"):
     _activate(mesh, arm)
-    bpy.ops.object.parent_set(type="ARMATURE_AUTO")
+    bpy.ops.object.parent_set(type="ARMATURE_AUTO" if method != "distance" else "ARMATURE")
     deform = {b.name for b in arm.data.bones if b.use_deform}
+    gidx = {g.index for g in mesh.vertex_groups if g.name in deform}
+    empty = sum(1 for v in mesh.data.vertices if not any(g.group in gidx and g.weight > 0 for g in v.groups))
+    used_method = "heat"
+    if method == "distance" or (method == "auto" and empty > 0.01 * len(mesh.data.vertices)):
+        distance_weights(mesh, arm, max_inf=max_inf)
+        used_method = "distance" if method == "distance" else f"distance (bone heat left {empty} vertices unweighted)"
+    mesh["u3d_weight_method"] = used_method
     apply_transfers(mesh, transfers, arm)
     # rigid vertex sets: weight 1.0 to one bone, 0 elsewhere
     for vg_name, bone in (rigid_groups or {}).items():
@@ -411,9 +444,10 @@ def run(args: dict) -> dict:
     if args.get("mode", "check") == "auto":
         refined = auto_weights(mesh, arm, args.get("rigid_groups"), max_inf,
                                float(args.get("clean_threshold", 0.01)), int(args.get("smooth_iterations", 0)),
-                               args.get("transfers"), args.get("refine"))
+                               args.get("transfers"), args.get("refine"), args.get("method", "auto"))
         if refined is not None:
             out["refine"] = refined
+        out["weight_method"] = mesh.get("u3d_weight_method")
         out["rigid_objects"] = attach_rigid_objects(arm, args.get("rigid_parts"))
     m = check(mesh, arm, max_inf)
     notes = []

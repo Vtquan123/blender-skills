@@ -49,7 +49,7 @@ window.run = async (samples) => {
   const center = box.getCenter(new THREE.Vector3());
   const cam = new THREE.PerspectiveCamera(35, 1, size / 100, size * 10);
   cam.position.copy(center).add(new THREE.Vector3(size * 1.3, size * 0.6, size * 1.3)); cam.lookAt(center);
-  const skinned = []; gltf.scene.traverse(o => { if (o.isSkinnedMesh) skinned.push(o); });
+  const skinned = []; gltf.scene.traverse(o => { if (o.isMesh) skinned.push(o); });   // skinned and rigid (bone-parented) meshes alike
   const v = new THREE.Vector3();
   const positions = () => skinned.map(m => { const n = m.geometry.attributes.position.count; const a = new Float32Array(n * 3);
     for (let i = 0; i < n; i++) { m.getVertexPosition(i, v); m.localToWorld(v); a[i*3]=v.x; a[i*3+1]=v.y; a[i*3+2]=v.z; } return a; });
@@ -63,9 +63,12 @@ window.run = async (samples) => {
   let match = null;
   if (samples) {
     match = {};
+    // prefer the mesh with the same (sanitised) name: rigid parts can share positions with the body at a cut
+    const clean = (s) => THREE.PropertyBinding.sanitizeNodeName(s);
     for (const [mesh, pts] of Object.entries(samples.rest)) match[mesh] = pts.map(p => {
       let best = [Infinity, -1, -1];
-      rest.forEach((arr, mi) => { for (let i = 0; i < arr.length; i += 3) {
+      const named = skinned.map((m, mi) => (clean(m.name) === clean(mesh) || (m.parent && clean(m.parent.name) === clean(mesh))) ? mi : -1).filter(mi => mi >= 0);
+      rest.forEach((arr, mi) => { if (named.length && !named.includes(mi)) return; for (let i = 0; i < arr.length; i += 3) {
         const d = (arr[i]-p[0])**2 + (arr[i+1]-p[1])**2 + (arr[i+2]-p[2])**2; if (d < best[0]) best = [d, mi, i / 3]; } });
       return { mi: best[1], vi: best[2], restDist: Math.sqrt(best[0]) };
     });
@@ -80,12 +83,13 @@ window.run = async (samples) => {
       for (const [frac, perMesh] of Object.entries(samples.clips[bkey].samples)) {
         const tt = samples.clips[bkey].times_s?.[frac] ?? clip.duration * Number(frac);
         mixer.setTime(tt); gltf.scene.updateMatrixWorld(true);
-        const cur = positions(); let w = 0;
+        const cur = positions(); let w = 0; let disp = 0;
         for (const [mesh, pts] of Object.entries(perMesh)) pts.forEach((p, k) => {
           const m = match[mesh][k]; const a = cur[m.mi]; const i = m.vi * 3;
           w = Math.max(w, Math.hypot(a[i]-p[0], a[i+1]-p[1], a[i+2]-p[2]));
+          const r0 = rest[m.mi]; disp = Math.max(disp, Math.hypot(a[i]-r0[i], a[i+1]-r0[i+1], a[i+2]-r0[i+2]));
         });
-        res.per_fraction[frac] = w; worst = Math.max(worst, w);
+        res.per_fraction[frac] = w; worst = Math.max(worst, w); res.motion_m = Math.max(res.motion_m || 0, disp);
       }
       res.max_vertex_dev_m = worst;
     }
@@ -148,6 +152,8 @@ if (th.file_size_mb_max != null && metrics.file_size_mb > th.file_size_mb_max) f
 if (th.draw_calls_max != null && metrics.draw_calls > th.draw_calls_max) fails.push('draw_calls');
 if (th.max_vertex_dev_m != null && metrics.max_vertex_dev_m != null && metrics.max_vertex_dev_m > th.max_vertex_dev_m) fails.push('vertex_dev');
 if (metrics.page_errors.length) fails.push('page_errors');
+// a clip that moves nothing in three.js (wrong slot, dropped channels, empty bake) is a failure, not a pass
+for (const [name, c] of Object.entries(metrics.clips_detail || {})) if (c.motion_m != null && c.motion_m < 1e-4) fails.push(`static_clip:${name}`);
 const gate = { gate: 'G7', status: fails.length ? 'fail' : 'pass', metrics, thresholds: th, failing: fails, at: new Date().toISOString() };
 if (args.gate) { mkdirSync(dirname(resolve(args.gate)), { recursive: true }); writeFileSync(args.gate, JSON.stringify(gate, null, 2)); }
 console.log(JSON.stringify(gate, null, 2));

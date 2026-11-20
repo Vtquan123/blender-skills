@@ -292,7 +292,8 @@ def _extremities(G, nodes, parent, children, min_len_levels, step, up, ground):
                     "slenderness": round(length / max(2 * float(np.median(radii)), 1e-6), 2),
                     "direction": _r(d / max(np.linalg.norm(d), 1e-9), 3),
                     "touches_ground": bool((np.min(G.centre[nodes[path[0]]["verts"]] @ up) - ground) < max(0.03 * (G.extent_up), 2 * G.vox)),
-                    "levels": len(path)})
+                    "levels": len(path),
+                    "path": [_r(nodes[q]["centre"]) for q in path]})
         _ext_voxels.append(np.concatenate([nodes[q]["verts"] for q in path[:-1]]))
     return ext
 
