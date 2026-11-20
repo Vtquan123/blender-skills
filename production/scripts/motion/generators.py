@@ -13,6 +13,9 @@ Guide: .claude/skills/animation/references/reference-driven-motion.md
     params     (dict)            generator parameters (from the brief)
     secondary  (list[dict])      follow-through chains: [{"bones": [...], "amp_deg": 10, "delay_frames": 2, "axis": "Z"}]
     keys       (list[dict])      for "pose_keys": [{"t": 0.0, "bones": {"name": {"rot": [x,y,z], "loc": [x,y,z]}}}]
+    ikfk       (dict)            {"upper_arm_parent.L": 0.0, ...} key Rigify IK_FK switches on the first and last frame
+                                 (0 = IK, 1 = FK). Every clip of a Rigify rig should key them: an unkeyed clip
+                                 inherits whatever value the previous clip left, so Blender and the export disagree.
     append     (bool, False)     key into the existing action instead of replacing it — layer several generators
                                  in one clip (idle = biped_idle + tail_wag + head_tilt); use distinct bones per layer
 
@@ -129,6 +132,106 @@ def quadruped_walk(rig, b, p, fps, cyc, loop):
             pb = rig.pose.bones[b["body"]]
             key_loc(pb, [0, 0, bounce * math.sin(4 * math.pi * u)], fr)
             key_rot(pb, axis_vec(p.get("pitch_axis", "X"), pitch * math.sin(2 * math.pi * u)), fr)
+        if b.get("head"):
+            key_rot(rig.pose.bones[b["head"]],
+                    axis_vec(p.get("head_axis", "X"), p.get("head_bob_deg", 3) * math.sin(4 * math.pi * u + 0.5)), fr)
+
+
+def _signed_angle(u, v, axis):
+    """Angle (radians) from u to v around axis (all mathutils Vectors, u and v ⟂ axis)."""
+    return math.atan2(u.cross(v).dot(axis), u.dot(v))
+
+
+def _two_bone_plane(S, E, W, T, lat):
+    """Planar two-bone IK: joints S→E→W, target T for W, bend kept on the rest side.
+    Returns (new E, clamped T). All vectors lie in the plane perpendicular to `lat`."""
+    a, b = (E - S).length, (W - E).length
+    d = T - S
+    c = max(min(d.length, a + b - 1e-6), abs(a - b) + 1e-6)
+    d = d.normalized()
+    T = S + d * c
+    cos_al = max(-1.0, min(1.0, (a * a + c * c - b * b) / (2 * a * c)))
+    al = math.acos(cos_al)
+    side = 1.0 if _signed_angle(W - S, E - S, lat) >= 0 else -1.0   # rest bend side
+    from mathutils import Matrix
+    dir_u = Matrix.Rotation(side * al, 3, lat) @ d
+    return S + dir_u * a, T
+
+
+def quadruped_walk_fk(rig, b, p, fps, cyc, loop):
+    """Lateral-sequence walk keyed on FK controls with planar two-bone IK per leg.
+
+    For short / stylised legs where Rigify IK picks a different bend plane per frame (knees flip, paws twist,
+    legs cross). Each leg is solved in its sagittal plane, keeping the rest bend direction; the paw keeps its
+    rest orientation (plus `paw_curl_deg` during swing), so contacts stay planted with root motion.
+
+    bones: {"leg_fl": [upper_fk, lower_fk, paw_fk], "leg_fr": [...], "leg_hl": [...], "leg_hr": [...],
+            "body": torso, "head": head, "ikfk": ["upper_arm_parent.L", ...]}  (IK_FK keyed to 1.0 = FK)
+    params: as quadruped_walk (stride, lift, duty, phases with keys foot_fl/fr/hl/hr, bounce, body_pitch_deg,
+            pitch_axis, head_bob_deg, head_axis) + forward_axis ("X", "-X", "Y", "-Y" in rig space), paw_curl_deg,
+            paw_curl_sign (+1/-1: flip if the paw curls upward instead of tucking during swing).
+    """
+    stride, lift, duty = p.get("stride", 0.3), p.get("lift", 0.05), p.get("duty", 0.6)
+    phases = p.get("phases", {"foot_hl": 0.0, "foot_fl": 0.25, "foot_hr": 0.5, "foot_fr": 0.75})
+    fa = p.get("forward_axis", "X")
+    F = Vector(axis_vec(fa.strip("-"), -1.0 if fa.startswith("-") else 1.0))
+    U = Vector((0.0, 0.0, 1.0))
+    lat = U.cross(F)
+    curl = math.radians(p.get("paw_curl_deg", 15.0))
+    frames = frames_for(fps, cyc, loop)
+    n = len(frames) - (1 if loop else 0)
+    legs = {}
+    for role, key in (("leg_fl", "foot_fl"), ("leg_fr", "foot_fr"), ("leg_hl", "foot_hl"), ("leg_hr", "foot_hr")):
+        names = b.get(role)
+        if not names:
+            continue
+        pbs = [rig.pose.bones[nm] for nm in names]
+        S, E, W = (pb.bone.head_local.copy() for pb in pbs)
+        # local X of each control in armature space: sign of its rotation relative to `lat`
+        signs = [1.0 if pb.bone.matrix_local.to_3x3().col[0].dot(lat) >= 0 else -1.0 for pb in pbs]
+        legs[role] = (pbs, S, E, W, signs, phases.get(key, 0.0))
+    for nm in b.get("ikfk", []):
+        pb = rig.pose.bones[nm]
+        for fr in (frames[0], frames[-1]):
+            pb["IK_FK"] = 1.0
+            pb.keyframe_insert('["IK_FK"]', frame=fr)
+    from mathutils import Matrix
+    body = rig.pose.bones[b["body"]] if b.get("body") else None
+    for i, fr in enumerate(frames):
+        u = (i % n) / n
+        bounce = p.get("bounce", 0.01) * math.sin(4 * math.pi * u)
+        pitch = p.get("body_pitch_deg", 2.0) * math.sin(2 * math.pi * u)
+        # body pose as a rigid transform in armature space; paw targets stay on the ground, so they are
+        # expressed in the moving body frame before solving (no sinking or floating while the body bobs)
+        Mb = Matrix.Identity(4)
+        body_pitch_lat = 0.0
+        if body is not None:
+            R0 = body.bone.matrix_local.to_3x3()
+            P = body.bone.head_local
+            ax = R0 @ Vector(axis_vec(p.get("pitch_axis", "X"), 1.0))
+            Mb = (Matrix.Translation(P + R0 @ Vector((0.0, 0.0, bounce))) @ Matrix.Rotation(math.radians(pitch), 4, ax)
+                  @ Matrix.Translation(-P))
+            body_pitch_lat = math.radians(pitch) * (1.0 if ax.dot(lat) >= 0 else -1.0)
+            key_loc(body, [0, 0, bounce], fr)
+            key_rot(body, axis_vec(p.get("pitch_axis", "X"), pitch), fr)
+        Mb_inv = Mb.inverted()
+        for role, (pbs, S, E, W, signs, ph) in legs.items():
+            s_ = (u + ph) % 1.0
+            if s_ < duty:
+                k = s_ / duty
+                along, up, c = stride * (0.5 - k), 0.0, 0.0
+            else:
+                k = (s_ - duty) / (1 - duty)
+                along, up = stride * (-0.5 + ease(k)), lift * math.sin(math.pi * k)
+                c = curl * math.sin(math.pi * k)
+            T = Mb_inv @ (W + F * along + U * up)
+            E2, T = _two_bone_plane(S, E, W, T, lat)
+            th_u = _signed_angle(E - S, E2 - S, lat)
+            th_l_world = _signed_angle(W - E, T - E2, lat)
+            th_l = th_l_world - th_u
+            th_p = -th_l_world - body_pitch_lat + c * p.get("paw_curl_sign", 1.0)
+            for pb, ang, sg in zip(pbs, (th_u, th_l, th_p), signs):
+                key_rot(pb, [math.degrees(sg * ang), 0.0, 0.0], fr)
         if b.get("head"):
             key_rot(rig.pose.bones[b["head"]],
                     axis_vec(p.get("head_axis", "X"), p.get("head_bob_deg", 3) * math.sin(4 * math.pi * u + 0.5)), fr)
@@ -272,7 +375,7 @@ def _linear(ob):
 
 
 GENERATORS = {
-    "quadruped_walk": quadruped_walk, "quadruped_trot": quadruped_trot, "biped_walk": biped_walk,
+    "quadruped_walk": quadruped_walk, "quadruped_walk_fk": quadruped_walk_fk, "quadruped_trot": quadruped_trot, "biped_walk": biped_walk,
     "biped_idle": biped_idle, "tail_wag": tail_wag, "wing_flap": wing_flap, "head_tilt": head_tilt,
     "perch_bob": perch_bob, "pose_keys": pose_keys,
     "turntable": turntable, "hinge_open": hinge_open, "bounce_in": bounce_in,
@@ -324,6 +427,13 @@ def run(args: dict) -> dict:
         fn(target, args.get("bones", {}), args.get("params", {}), fps, cyc, loop)
     if gen not in OBJECT_GENERATORS:
         follow_through(target, args.get("secondary"), fps, cyc, loop)
+        if args.get("ikfk"):
+            f_last = frames_for(fps, cyc, loop)[-1]
+            for nm, val in args["ikfk"].items():
+                pb = target.pose.bones[nm]
+                for fr in (1, f_last):
+                    pb["IK_FK"] = float(val)
+                    pb.keyframe_insert('["IK_FK"]', frame=fr)
     f0, f1 = ad.action.frame_range
     ad.action.use_fake_user = True
     if args.get("bake_deform") and target.type == "ARMATURE":

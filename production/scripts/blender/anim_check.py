@@ -7,6 +7,10 @@ args:
     loops        (list[str])            clips that must loop seamlessly
     feet         (list[str])            deform bones touching the ground (for foot-slide)
     contact_eps  (float, 0.01)          metres above the lowest foot height that still counts as contact
+                                        (keep it well below the step lift: ~0.002 for a 25 cm animal)
+    root_velocity (dict)                {clip: [vx, vy, vz]} m/s of the root motion the clip is played with.
+                                        In-place cycles move planted feet backwards on purpose; that motion is
+                                        removed before measuring foot slide.
     thresholds   (dict)                 {"loop_seam_max_deg": .., "foot_slide_max_m": ..}
     project_dir  (str, optional)        write reports/gate-G5.json
 """
@@ -88,14 +92,18 @@ def run(args: dict) -> dict:
                 for f in feet:
                     track[f].append(np.array(arm.matrix_world @ arm.pose.bones[f].head))
             slide = 0.0
+            v = np.array((args.get("root_velocity") or {}).get(name, [0.0, 0.0, 0.0]), dtype=float)[:2]
+            step = v / scene.render.fps
             for f, pts in track.items():
                 pts = np.array(pts)
                 ground = pts[:, 2].min()
                 contact = pts[:, 2] <= ground + eps
                 for i in range(1, len(pts)):
                     if contact[i] and contact[i - 1]:
-                        slide = max(slide, float(np.linalg.norm(pts[i, :2] - pts[i - 1, :2])))
+                        slide = max(slide, float(np.linalg.norm(pts[i, :2] - pts[i - 1, :2] + step)))
             info["foot_slide_max_m"] = round(slide, 5)
+            if v.any():
+                info["root_velocity_mps"] = v.tolist()
         clips[name] = info
     ad.action = prev
 

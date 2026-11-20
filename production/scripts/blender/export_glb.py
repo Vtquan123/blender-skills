@@ -92,10 +92,25 @@ def run(args: dict) -> dict:
     objs = [bpy.data.objects[n] for n in names] if names else [o for o in scene.objects if o.visible_get()]
     for o in scene.objects:
         o.select_set(False)
+    # hidden objects cannot be selected, and use_selection would silently drop them (an armature hidden in
+    # the viewport exports a mesh with no skin and no clips): unhide for the export, restore afterwards
+    hidden = [o for o in objs if o.hide_get() or o.hide_viewport or o.hide_select]
+    prev_hide = {o.name: (o.hide_get(), o.hide_viewport, o.hide_select) for o in hidden}
+    for o in hidden:
+        o.hide_viewport = False
+        o.hide_select = False
+        o.hide_set(False)
     for o in objs:
         o.select_set(True)
     if objs:
         bpy.context.view_layer.objects.active = objs[0]
+    not_selected = [o.name for o in objs if not o.select_get()]
+    if not_selected:
+        for o in hidden:
+            h, hv, hs = prev_hide[o.name]
+            o.hide_set(h)
+            o.hide_viewport, o.hide_select = hv, hs
+        return C.result_error(f"could not select objects for export (excluded from the view layer?): {not_selected}")
 
     # temporary action renames
     rename = dict(args.get("clip_names") or {})
@@ -148,6 +163,11 @@ def run(args: dict) -> dict:
     try:
         bpy.ops.export_scene.gltf(**kwargs)
     finally:
+        for name, (h, hv, hs) in prev_hide.items():
+            o = bpy.data.objects.get(name)
+            if o:
+                o.hide_set(h)
+                o.hide_viewport, o.hide_select = hv, hs
         if filter_state is not None:
             _clear_action_filter(filter_state)
         for new, old in restore.items():
