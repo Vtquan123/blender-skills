@@ -49,6 +49,10 @@ Order: create → fit → prune → snap → trace → overrides → roll fix �
 | Twisted controls | automatic (`fix_rolls`) | Restores each bone's template X axis (bend/lateral axis) after non-uniform fitting and moves |
 | Rig displaced from mesh | automatic | The metarig's location is applied: Rigify builds from LOCAL bone positions at the world origin |
 | glTF deformation match | automatic (`flatten_bbones`) | DEF bones set to 1 B-Bone segment after generate |
+| Model not facing -Y | automatic | Rigify paw rigs build heel/track helpers along WORLD axes assuming -Y forward; the metarig is generated facing -Y and the rig turned back. Without this both front paws of the +X cat were pulled ~1 cm to the same side |
+| Paw bind pose in IK | automatic (`paw_auto_track: false`) | Rigify's paw auto-tracking (DAMPED_TRACK, 0.8) is not neutral at rest; off so IK, FK and bind pose agree (0.002 mm) |
+
+After generating, check the rest pose in **both** IK and FK: with every control at identity no ORG/DEF bone may move (switch `IK_FK`, change frame, read the evaluated rig). A non-zero offset is a rig bug — fix it before skinning; weights and animation cannot hide it.
 
 Placement rules learned on stylised assets:
 - Put limb joints **inside the visible limb**. On stubby legs the template's hock lands at belly height; move it just above the paw (G4a fails otherwise — the joint has no ring of loops around it).

@@ -94,6 +94,7 @@ Example (test run, calico cat): 58 MB / 1.94 M triangles → 0.94 MB / 23.8 k tr
 | Wrong clip list in the GLB | Pass `clips: [...]` to `export_glb.py`; work actions such as `AN_ROM` are excluded |
 | GLB has no animation / no skin | The armature was not exported; `export_glb.py` now unhides objects and errors if it cannot select them |
 | Walking legs cross, knees flip, paws twist | Rigify IK on short legs; use `quadruped_walk_fk` |
+| Both paws skewed to one side | Rig generated off the -Y convention or paw auto-tracking on; regenerate with current `rig_fit.py` (rest pose must not move in IK or FK) |
 | One clip differs between Blender and three.js | That clip does not key `IK_FK`; pass `ikfk` to the generator |
 
 ## 7. Limits

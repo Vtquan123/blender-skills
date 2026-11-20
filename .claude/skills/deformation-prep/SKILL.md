@@ -53,6 +53,7 @@ Scripts live in `production/scripts/blender/` and expose `run(args) -> dict` (se
 | Normal map shows the quad grid | Target was flat-shaded while baking; `deform_mesh.py` now shades smooth, re-bake normals |
 | Blender and three.js poses differ by centimetres | B-Bone segments on DEF bones; flatten (default in `rig_fit.py`). Only one clip differs → that clip does not key `IK_FK` |
 | Walking legs cross, knees flip, paws twist | Rigify IK on short legs; animate with `quadruped_walk_fk` (planar IK on FK controls) |
+| Both paws skewed to the same side, even at rest | Rig generated facing another direction than -Y (Rigify paw helpers use world axes) or paw auto-tracking on; regenerate with current `rig_fit.py` and run the IK/FK rest check |
 
 Web runtimes use linear blend skinning and read four influences per vertex; design weights for that limit (`web-export`).
 

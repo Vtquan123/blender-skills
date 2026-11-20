@@ -30,6 +30,7 @@ Format: [Semantic Versioning](https://semver.org/) — `Major.Minor.Patch`
 ### Fixed
 - `dream-weirdcore-style` related skill `surreal-mood` → `dream-surreal-mood`
 - QUICKSTART plugin install id (`blender-skills@blender-skills`)
+- Front paws skewed to one side (user report): Rigify paw helpers assume a -Y-facing character; `rig_fit.py` now generates in that orientation and turns the rig back, and disables Rigify's paw auto-tracking (not neutral at rest) — IK and FK rest poses match the bind pose
 - Walk on short legs (user report: crossing legs, twisted paws): new `quadruped_walk_fk` generator — planar two-bone IK on FK controls with body compensation; generators key `IK_FK` per clip (`ikfk`); `anim_check.py` takes `root_velocity` for in-place cycles; `export_glb.py` unhides objects so a hidden armature is not dropped
 - Found by the end-to-end test and fixed in the scripts: Rigify rig displaced from the mesh (metarig location not applied), twisted control rolls after fitting, "disjoint chain" Rigify errors after moving joints, QuadriFlow refusing small assets, faceted normal bakes, B-Bones breaking Blender↔three.js parity, empty extra glTF scene, missing tangents, work actions exported as clips, ROM test not moving IK limbs, G4b passing collapsed weights, G2/G3 gate files never written
 
