@@ -18,6 +18,8 @@ args (mode "setup"):
     resolution     (list[int])       [1280, 720]
     fps            (int)             default scene fps of the source
     engine         (str)             "BLENDER_EEVEE" (default) or "CYCLES"
+    background     (list[float])     world colour RGB 0-1 (match a reference video), default light blue-grey
+    ground_colors  (list[list])      two RGB checker colours; [c, c] for a plain floor
 args (mode "render"):
     scene          (str, required)
     out_dir        (str, required)   frames are written as <out_dir>/<prefix>NNNN.png
@@ -100,7 +102,16 @@ def setup(args):
 
     rig = src_rig.copy()
     rig.name = f"{PREFIX}rig"
-    rig.animation_data_clear()
+    # keep the copy's DRIVERS (Rigify IK/FK switches, follow sliders); drop only the action and NLA tracks.
+    # animation_data_clear() would remove the drivers too and freeze the limbs in whatever mode they were in.
+    if rig.animation_data:
+        rig.animation_data.action = None
+        for t in list(rig.animation_data.nla_tracks):
+            rig.animation_data.nla_tracks.remove(t)
+    drv_targets = {v.targets[0].id for d in (rig.animation_data.drivers if rig.animation_data else [])
+                   for v in d.driver.variables if v.targets and v.targets[0].id is not None}
+    if src_rig in drv_targets:
+        return C.result_error("copied rig drivers still point at the source rig; cannot build an independent preview")
     rig.hide_render = True
     sc.collection.objects.link(rig)
     for pb in rig.pose.bones:
@@ -164,8 +175,9 @@ def setup(args):
     bsdf = next(n for n in nt.nodes if n.type == "BSDF_PRINCIPLED")
     chk = nt.nodes.new("ShaderNodeTexChecker")
     chk.inputs["Scale"].default_value = 2 * g / (0.2 * size)   # squares ≈ 10 % of the asset size
-    chk.inputs["Color1"].default_value = (0.62, 0.60, 0.56, 1)
-    chk.inputs["Color2"].default_value = (0.52, 0.50, 0.47, 1)
+    c1, c2 = args.get("ground_colors") or ((0.62, 0.60, 0.56), (0.52, 0.50, 0.47))
+    chk.inputs["Color1"].default_value = (*c1, 1)
+    chk.inputs["Color2"].default_value = (*c2, 1)
     nt.links.new(chk.outputs["Color"], bsdf.inputs["Base Color"])
     bsdf.inputs["Roughness"].default_value = 0.85
     ground_mesh.materials.append(mat)
@@ -185,7 +197,7 @@ def setup(args):
     world = bpy.data.worlds.new(f"{PREFIX}world")
     world.use_nodes = True
     bg = world.node_tree.nodes["Background"]
-    bg.inputs["Color"].default_value = (0.78, 0.84, 0.92, 1)
+    bg.inputs["Color"].default_value = (*(args.get("background") or (0.78, 0.84, 0.92)), 1)
     bg.inputs["Strength"].default_value = 0.9
     sc.world = world
 

@@ -73,6 +73,10 @@ def run(args: dict) -> dict:
         act = bpy.data.actions.get(name)
         if act is None:
             continue
+        # each glTF clip starts from the rest pose; a bone keyed only in an earlier clip would otherwise keep that
+        # clip's last value here (Blender keeps un-keyed channels), and the samples would not match the export
+        for pb in arm.pose.bones:
+            pb.matrix_basis.identity()
         ad.action = act
         if hasattr(ad, "action_slot") and len(getattr(act, "slots", [])):
             ad.action_slot = act.slots[0]
