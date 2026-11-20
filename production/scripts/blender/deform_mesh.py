@@ -23,7 +23,7 @@ import sys
 import bmesh
 import bpy
 import numpy as np
-from mathutils import Vector
+from mathutils import Matrix, Vector
 
 
 def _load_common():
@@ -45,7 +45,8 @@ C = _load_common()
 
 def _activate(ob):
     for o in bpy.context.view_layer.objects:
-        o.select_set(False)
+        if o is not None:  # stale entries right after bpy.data.objects.remove
+            o.select_set(False)
     ob.select_set(True)
     bpy.context.view_layer.objects.active = ob
 
@@ -164,6 +165,21 @@ def enforce_joint_loops(ob, joints):
     return results
 
 
+def _quadriflow_scale(me, limit=1e-4, margin=3.0) -> float:
+    """Factor that lifts the shortest edge above QuadriFlow's per-axis 1e-4 duplicate-vertex check."""
+    co = np.empty(len(me.vertices) * 3)
+    me.vertices.foreach_get("co", co)
+    ev = np.empty(len(me.edges) * 2, dtype=np.int64)
+    me.edges.foreach_get("vertices", ev)
+    co, ev = co.reshape(-1, 3), ev.reshape(-1, 2)
+    if not len(ev):
+        return 1.0
+    shortest = float(np.abs(co[ev[:, 0]] - co[ev[:, 1]]).max(1).min())
+    if shortest >= limit * margin:
+        return 1.0
+    return float(min(limit * margin / max(shortest, 1e-12), 1e4))
+
+
 def run(args: dict) -> dict:
     src = bpy.data.objects.get(args.get("source", ""))
     if src is None or src.type != "MESH":
@@ -175,14 +191,25 @@ def run(args: dict) -> dict:
     weld_and_fill(ob)
     predecimate(ob, int(args.get("predecimate_tris", 300000)))
     _activate(ob)
+    # Blender's QuadriFlow pre-check rejects edges shorter than 1e-4 on every axis ("needs to be manifold…"),
+    # which small real-scale assets (a 25 cm kitten) hit after decimation. QuadriFlow is scale-invariant,
+    # so remesh a temporarily enlarged copy and scale it back.
+    k = _quadriflow_scale(ob.data)
+    if k != 1.0:
+        ob.data.transform(Matrix.Scale(k, 4))
     res = bpy.ops.object.quadriflow_remesh(target_faces=int(args["target_faces"]),
                                            use_mesh_symmetry=bool(args.get("symmetry", False)),
                                            use_preserve_sharp=False, use_preserve_boundary=False,
                                            preserve_attributes=False, smooth_normals=False, seed=0)
+    if k != 1.0:
+        ob.data.transform(Matrix.Scale(1.0 / k, 4))
+        ob.data.update()
     if "FINISHED" not in res:
-        return C.result_error(f"QuadriFlow failed: {res}", object=ob.name)
+        return C.result_error(f"QuadriFlow failed: {res} (mesh must be manifold with consistent normals)",
+                              object=ob.name, prescale=k)
     shrinkwrap(ob, src, float(args.get("shrinkwrap_offset", 0.0)))
     loops = enforce_joint_loops(ob, args.get("joints", [])) if args.get("joints") else []
     if loops:
         shrinkwrap(ob, src, float(args.get("shrinkwrap_offset", 0.0)))
-    return C.result_ok(object=ob.name, stats=C.mesh_stats(ob), joint_loops=loops)
+    ob.data.shade_smooth()  # QuadriFlow output is flat; a flat cage bakes faceting into the normal map
+    return C.result_ok(object=ob.name, stats=C.mesh_stats(ob), joint_loops=loops, prescale=k)

@@ -4,6 +4,7 @@
 //
 //   node production/scripts/validation/runtime_check.mjs --glb <web.glb> [--samples <blender-samples.json>]
 //        [--spec <output-spec.yaml>] [--gate <reports/gate-G7.json>] [--shots <reports/runtime>]
+//        [--chrome [<path to chrome>]]   use installed Google Chrome (bare flag) or a given executable
 //
 // Requires: npm install (in production/) and `npx playwright install chromium` once.
 import http from 'node:http';
@@ -115,7 +116,8 @@ await new Promise(r => server.listen(0, '127.0.0.1', r));
 const port = server.address().port;
 const launchArgs = ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'];
 let browser;
-if (args.chrome) browser = await chromium.launch({ executablePath: args.chrome, args: launchArgs });
+if (typeof args.chrome === 'string') browser = await chromium.launch({ executablePath: args.chrome, args: launchArgs });
+else if (args.chrome) browser = await chromium.launch({ channel: 'chrome', args: launchArgs });   // bare --chrome
 else {
   try { browser = await chromium.launch({ args: launchArgs }); }                 // playwright's own Chromium
   catch { browser = await chromium.launch({ channel: 'chrome', args: launchArgs }); } // installed Google Chrome

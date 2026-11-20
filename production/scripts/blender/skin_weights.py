@@ -41,7 +41,8 @@ C = _load_common()
 
 def _activate(*objs):
     for o in bpy.context.view_layer.objects:
-        o.select_set(False)
+        if o is not None:  # stale entries right after bpy.data.objects.remove
+            o.select_set(False)
     for o in objs:
         o.select_set(True)
     bpy.context.view_layer.objects.active = objs[-1]
@@ -105,7 +106,10 @@ def check(mesh, arm, max_inf):
         if abs(sum(ws) - 1.0) > 1e-3:
             unnorm += 1
     has_mod = any(m.type == "ARMATURE" and m.object == arm for m in mesh.modifiers)
-    return {"armature_modifier": has_mod, "deform_bones": len(deform), "unweighted_verts": unweighted,
+    used = {gidx[g.group] for v in mesh.data.vertices for g in v.groups if g.group in gidx and g.weight > 0.01}
+    unused = sorted(deform - used)
+    return {"armature_modifier": has_mod, "deform_bones": len(deform), "deform_bones_without_weights": unused,
+            "unweighted_verts": unweighted,
             "verts_over_max_influences": over, "max_influences_found": worst,
             "unnormalized_verts": unnorm, "max_influences_allowed": max_inf}
 
@@ -122,9 +126,15 @@ def run(args: dict) -> dict:
                      float(args.get("clean_threshold", 0.01)), int(args.get("smooth_iterations", 0)))
         out["rigid_objects"] = attach_rigid_objects(arm, args.get("rigid_parts"))
     m = check(mesh, arm, max_inf)
-    status = "pass" if (m["armature_modifier"] and m["unweighted_verts"] == 0 and
+    notes = []
+    collapsed = len(m["deform_bones_without_weights"]) > 0.25 * max(m["deform_bones"], 1)
+    if collapsed:
+        notes.append("more than 25% of deform bones have no weights: automatic weights collapsed "
+                     "(check that the rig overlaps the mesh — an unapplied metarig transform displaces the "
+                     "generated rig — and Blender's bone-heat warnings)")
+    status = "pass" if (m["armature_modifier"] and m["unweighted_verts"] == 0 and not collapsed and
                         m["verts_over_max_influences"] == 0 and m["unnormalized_verts"] == 0) else "fail"
-    gate = {"gate": "G4b", "status": status, "metrics": m, "at": C.now_iso()}
+    gate = {"gate": "G4b", "status": status, "metrics": m, "notes": notes, "at": C.now_iso()}
     if args.get("project_dir"):
         C.write_json(os.path.join(args["project_dir"], "reports", "gate-G4b.json"), gate)
     return C.result_ok(gate=gate, **out)

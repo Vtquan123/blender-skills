@@ -92,7 +92,8 @@ def chain(ob, p0, p1, n):
         prev = eb
     bpy.ops.object.mode_set(mode="OBJECT")
     for o in bpy.context.view_layer.objects:
-        o.select_set(False)
+        if o is not None:  # stale entries right after bpy.data.objects.remove
+            o.select_set(False)
     ob.select_set(True)
     arm.select_set(True)
     bpy.context.view_layer.objects.active = arm

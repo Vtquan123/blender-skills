@@ -6,9 +6,20 @@ args:
     samples       (int, 4000)      vertices sampled for deviation
     uv_resolution (int, 256)       raster size for the UV overlap estimate
     project_dir   (str, optional)  write reports/metrics-<target>.json
+    gate          (str, optional)  "G2" or "G3": also write reports/gate-<gate>.json
+    thresholds    (dict, optional) for G2: triangles_max (budgets.triangles), silhouette_max_dev
+                                   (acceptance.G2.silhouette_max_dev, fraction of the source bbox
+                                   diagonal), nonmanifold_edges_max (default 0);
+                                   for G3: uv_overlap_max, materials_max (budgets.materials)
+    bake          (dict, optional) for G3: the result of bake_maps.py ({"paths": {...}, "empty_maps": [...]})
 
-returns: dict with geometry, deviation, uv metrics
+A threshold left null is not invented: the metric is recorded and the gate becomes
+needs_review instead of pass. Empty baked maps always fail G3.
+
+returns: dict with geometry, deviation, uv metrics (+ gate when requested)
 """
+from __future__ import annotations
+
 import importlib.util
 import os
 import sys
@@ -128,4 +139,63 @@ def run(args: dict) -> dict:
     out["uv"] = uv_overlap(tgt, int(args.get("uv_resolution", 256)))
     if args.get("project_dir"):
         out["written"] = C.write_json(os.path.join(args["project_dir"], "reports", f"metrics-{tgt.name}.json"), out)
+    if args.get("gate"):
+        gate = make_gate(str(args["gate"]).upper(), out, args.get("thresholds") or {}, args.get("bake"))
+        if gate is None:
+            return C.result_error(f"unknown gate {args['gate']}; use G2 or G3")
+        if args.get("project_dir"):
+            C.write_json(os.path.join(args["project_dir"], "reports", f"gate-{gate['gate']}.json"), gate)
+        out["gate"] = gate
     return C.result_ok(**out)
+
+
+def _check(metrics, th, key_metric, key_th, fails, unset):
+    lim = th.get(key_th)
+    if lim is None:
+        unset.append(key_th)
+    elif metrics.get(key_metric) is not None and metrics[key_metric] > lim:
+        fails.append(key_metric)
+
+
+def make_gate(gid: str, out: dict, th: dict, bake) -> dict | None:
+    g = out["geometry"]
+    fails, unset, notes = [], [], []
+    if gid == "G2":
+        sil = out.get("silhouette") or {}
+        m = {"triangles": g["triangles"], "nonmanifold_edges": g["nonmanifold_edges"],
+             "transforms_applied": out["transforms_applied"], "components": g["components"],
+             "silhouette_max_ratio": sil.get("max_ratio"), "silhouette_p95_m": sil.get("p95_m"),
+             "silhouette_max_m": sil.get("max_m")}
+        th = {"nonmanifold_edges_max": 0, **th}
+        _check(m, th, "triangles", "triangles_max", fails, unset)
+        _check(m, th, "nonmanifold_edges", "nonmanifold_edges_max", fails, unset)
+        if not m["transforms_applied"]:
+            fails.append("transforms_applied")
+        if not sil:
+            notes.append("no source given: silhouette deviation not measured")
+            unset.append("silhouette_max_dev")
+        else:
+            _check(m, th, "silhouette_max_ratio", "silhouette_max_dev", fails, unset)
+    elif gid == "G3":
+        uv = out.get("uv") or {}
+        bake = bake or {}
+        maps = sorted((bake.get("paths") or {}).keys())
+        empty = list(bake.get("empty_maps") or [])
+        m = {"uv_layers": uv.get("uv_layers"), "uv_overlap_ratio": uv.get("overlap_ratio"),
+             "uv_coverage": uv.get("coverage"), "uv_tris_outside_0_1": uv.get("tris_outside_0_1"),
+             "materials": len([x for x in g["materials"] if x]), "maps_present": maps, "maps_empty": empty}
+        if not uv.get("uv_layers"):
+            fails.append("uv_layers")
+        _check(m, th, "uv_overlap_ratio", "uv_overlap_max", fails, unset)
+        _check(m, th, "materials", "materials_max", fails, unset)
+        if empty:
+            fails.append("maps_empty")
+        if not maps:
+            notes.append("no bake result given: maps not checked")
+    else:
+        return None
+    status = "fail" if fails else ("needs_review" if unset else "pass")
+    if unset:
+        notes.append("thresholds not set in output-spec (not assumed): " + ", ".join(sorted(set(unset))))
+    return {"gate": gid, "status": status, "metrics": m, "thresholds": th, "failing": fails,
+            "notes": notes, "at": C.now_iso()}

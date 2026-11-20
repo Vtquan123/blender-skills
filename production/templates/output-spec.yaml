@@ -56,7 +56,8 @@ compression:
 
 acceptance:
   approve_at: [G1, G4a, G4c]
-  G2: {silhouette_max_dev: null}
+  G2: {silhouette_max_dev: null}      # fraction of the source bbox diagonal, e.g. 0.01
+  G3: {uv_overlap_max: null}          # fraction of used UV area, e.g. 0.0 for unique bakes
   G4c: {volume_loss_max: null, pinch_max: null, stretch_max: null, self_intersections_max: null}
   G5: {loop_seam_max_deg: null, foot_slide_max_m: null}
   G6: {validator_errors_max: 0}

@@ -5,9 +5,13 @@ Compression happens once, later, in production/scripts/node/optimize.mjs — nev
 args:
     filepath        (str, required)  e.g. projects/<name>/output/<name>.master.glb
     objects         (list[str])      objects to export (armature + meshes). Default: all visible objects in scene.
+    clips           (list[str])      export only these clips (spec names or action names; "AN_" prefix optional).
+                                     Other actions (AN_ROM, work-in-progress) are excluded with the glTF add-on's
+                                     action filter. Default: every action (the exporter's ACTIONS mode).
     clip_names      (dict)           {"AN_Walk": "walk"} rename actions for the export, restored afterwards
     strip_prefix    (str, "AN_")     prefix removed from action names when clip_names does not cover them
     max_influences  (int, 4)
+    tangents        (bool, True)     export tangents (needed for portable normal mapping; small size cost)
     deform_bones_only (bool, True)
     fps             (int, optional)  set scene fps before export
     project_dir     (str, optional)  write reports/export.json
@@ -40,6 +44,39 @@ C = _load_common()
 
 def _supported(op) -> set:
     return {p.identifier for p in op.get_rna_type().properties}
+
+
+def _set_action_filter(keep_names, restore):
+    """Use the glTF add-on's own action filter (scene.gltf_action_filter, items with keep=False are skipped)."""
+    import io_scene_gltf2
+    scene = bpy.data.scenes[0]  # the add-on reads scenes[0]
+    created = not hasattr(scene, "gltf_action_filter")
+    if created:
+        bpy.types.Scene.gltf_action_filter = bpy.props.CollectionProperty(type=io_scene_gltf2.GLTF2_filter_action)
+        bpy.types.Scene.gltf_action_filter_active = bpy.props.IntProperty()
+    prev = [(item.action, item.keep) for item in scene.gltf_action_filter]
+    scene.gltf_action_filter.clear()
+    excluded = []
+    for act in bpy.data.actions:
+        original = restore.get(act.name, act.name)
+        item = scene.gltf_action_filter.add()
+        item.action = act
+        item.keep = act.name in keep_names or original in keep_names
+        if not item.keep:
+            excluded.append(original)
+    return {"created": created, "prev": prev, "excluded": sorted(excluded)}
+
+
+def _clear_action_filter(state):
+    scene = bpy.data.scenes[0]
+    scene.gltf_action_filter.clear()
+    if state["created"]:
+        del bpy.types.Scene.gltf_action_filter
+        del bpy.types.Scene.gltf_action_filter_active
+    else:
+        for act, keep in state["prev"]:
+            item = scene.gltf_action_filter.add()
+            item.action, item.keep = act, keep
 
 
 def run(args: dict) -> dict:
@@ -77,10 +114,12 @@ def run(args: dict) -> dict:
         "filepath": path,
         "export_format": "GLB",
         "use_selection": True,
+        "use_active_scene": True,                # other scenes in the .blend would export as empty scenes (G6 error)
         "export_yup": True,
         "export_apply": True,
         "export_texcoords": True,
         "export_normals": True,
+        "export_tangents": bool(args.get("tangents", True)),  # normal-mapped materials: portable tangent space
         "export_materials": "EXPORT",
         "export_image_format": "AUTO",
         "export_skins": True,
@@ -98,11 +137,19 @@ def run(args: dict) -> dict:
         "export_meshopt_compression_enable": False,
     }
     supported = _supported(bpy.ops.export_scene.gltf)
+    excluded, filter_state = [], None
+    if args.get("clips") is not None and "export_action_filter" in supported:
+        keep = set(args["clips"]) | {prefix + c for c in args["clips"]} | {rename.get(prefix + c, c) for c in args["clips"]}
+        filter_state = _set_action_filter(keep, restore)
+        excluded = filter_state["excluded"]
+        wanted["export_action_filter"] = True
     kwargs = {k: v for k, v in wanted.items() if k in supported}
     skipped = sorted(set(wanted) - set(kwargs))
     try:
         bpy.ops.export_scene.gltf(**kwargs)
     finally:
+        if filter_state is not None:
+            _clear_action_filter(filter_state)
         for new, old in restore.items():
             act = bpy.data.actions.get(new)
             if act:
@@ -111,6 +158,7 @@ def run(args: dict) -> dict:
     if not os.path.exists(path):
         return C.result_error("export finished but file missing", kwargs=kwargs)
     info = {"filepath": path, "bytes": os.path.getsize(path), "objects": [o.name for o in objs],
+            "excluded_actions": excluded,
             "clip_renames": rename, "settings": kwargs, "unsupported_settings": skipped,
             "blender": bpy.app.version_string}
     if args.get("project_dir"):

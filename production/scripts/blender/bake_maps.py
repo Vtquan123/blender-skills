@@ -17,8 +17,11 @@ args:
     name         (str)             file prefix, default target name
     pack_orm     (bool, True)      write <name>_ORM.png (R=AO, G=roughness, B=metallic) from baked maps
     build_material (bool, True)    create a glTF-ready material on the target from the baked maps
+    use_existing (bool, True)      maps not baked in this call but already in out_dir (<name>_<map>.png from an
+                                   earlier call) are used for the ORM pack and the material
 
-Run one or two maps per MCP call on dense sources to stay within call timeouts.
+Run one or two maps per MCP call on dense sources to stay within call timeouts; the last call (with
+use_existing) packs ORM and builds the material from every map on disk.
 """
 import importlib.util
 import os
@@ -107,7 +110,8 @@ def _bake(source, target, kind, img, s):
     for slot in target.material_slots:
         slot.material = tmat
     for o in bpy.context.view_layer.objects:
-        o.select_set(False)
+        if o is not None:  # stale entries right after bpy.data.objects.remove
+            o.select_set(False)
     source.select_set(True)
     target.select_set(True)
     bpy.context.view_layer.objects.active = target
@@ -176,6 +180,11 @@ def run(args: dict) -> dict:
         return C.result_error("source and target objects required")
     if not tgt.data.uv_layers:
         return C.result_error("target has no UVs; run the UV stage first")
+    warnings = []
+    flat = sum(1 for poly in tgt.data.polygons if not poly.use_smooth)
+    if flat:
+        warnings.append(f"target has {flat} flat-shaded faces: the normal map will carry faceting "
+                        "(shade the target smooth before baking normals)")
     out_dir = C.ensure_dir(args["out_dir"])
     name = args.get("name", tgt.name)
     size = int(args.get("size", 2048))
@@ -222,6 +231,12 @@ def run(args: dict) -> dict:
         scene.render.engine = prev_engine
         scene.cycles.device = prev_device
 
+    baked_now = sorted(paths)
+    if args.get("use_existing", True):
+        for m in ALL_MAPS:
+            p = os.path.join(out_dir, f"{name}_{m}.png")
+            if m not in paths and os.path.exists(p):
+                paths[m] = p
     stats = {}
     for m, p in paths.items():
         img = bpy.data.images.load(p, check_existing=True)
@@ -245,5 +260,5 @@ def run(args: dict) -> dict:
 
     mat_name = build_material(tgt, paths, name) if args.get("build_material", True) else None
     s["device"] = _pick_device(args.get("device", "auto"))
-    return C.result_ok(paths=paths, stats=stats, settings=s, material=mat_name,
+    return C.result_ok(paths=paths, baked_now=baked_now, warnings=warnings, stats=stats, settings=s, material=mat_name,
                        empty_maps=[m for m, st in stats.items() if st["empty"]])

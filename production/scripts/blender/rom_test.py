@@ -15,6 +15,8 @@ args:
         [{"name": "elbow.L", "control": "forearm_fk.L", "measure_bone": "DEF-forearm.L",
           "axis": "X", "limits": [0, 140], "kind": "bend"}]   # kind: bend | twist
     frames_per_step (int, 8)
+    fk           (bool, True)      set every "IK_FK" custom property (Rigify limbs) to 1.0 = FK for the test,
+                                   so rotating *_fk controls moves the limbs; previous values are restored
     thresholds   (dict)            {"volume_loss_max": .., "pinch_max": .., "stretch_max": .., "self_intersections_max": ..}
     keep_action  (bool, True)
     project_dir  (str, optional)   write reports/rom.json and gate-G4c.json
@@ -148,6 +150,13 @@ def run(args: dict) -> dict:
         return C.result_error("rig, mesh and joints required")
     scene = bpy.context.scene
     fps_step = int(args.get("frames_per_step", 8))
+    ikfk_prev = {}
+    if args.get("fk", True):
+        for pb in rig.pose.bones:
+            if "IK_FK" in pb.keys():
+                ikfk_prev[pb.name] = pb["IK_FK"]
+                pb["IK_FK"] = 1.0
+        rig.update_tag()
     ad = rig.animation_data or rig.animation_data_create()
     prev_action = ad.action
     act = bpy.data.actions.get("AN_ROM") or bpy.data.actions.new("AN_ROM")
@@ -220,6 +229,8 @@ def run(args: dict) -> dict:
                         "stretch_max": max((p["stretch_max"] or 0) for p in per.values()),
                         "self_intersections": max(p["self_intersections"] for p in per.values())})
     scene.frame_set(1)
+    for name, val in ikfk_prev.items():
+        rig.pose.bones[name]["IK_FK"] = val
     if not args.get("keep_action", True):
         ad.action = prev_action
         bpy.data.actions.remove(act)
@@ -241,7 +252,8 @@ def run(args: dict) -> dict:
     gate = {"gate": "G4c", "status": "fail" if failing else "needs_review",
             "metrics": {"joints": len(results), "failing": failing}, "thresholds": th,
             "notes": ["approve from the contact sheet of worst_frame per joint"], "at": C.now_iso()}
-    out = {"action": "AN_ROM", "frame_range": [1, frame], "joints": results, "gate": gate}
+    out = {"action": "AN_ROM", "frame_range": [1, frame], "joints": results, "gate": gate,
+           "fk_switched": sorted(ikfk_prev)}
     if args.get("project_dir"):
         rep = os.path.join(args["project_dir"], "reports")
         C.write_json(os.path.join(rep, "rom.json"), out)

@@ -13,10 +13,14 @@ Guide: .claude/skills/animation/references/reference-driven-motion.md
     params     (dict)            generator parameters (from the brief)
     secondary  (list[dict])      follow-through chains: [{"bones": [...], "amp_deg": 10, "delay_frames": 2, "axis": "Z"}]
     keys       (list[dict])      for "pose_keys": [{"t": 0.0, "bones": {"name": {"rot": [x,y,z], "loc": [x,y,z]}}}]
+    append     (bool, False)     key into the existing action instead of replacing it — layer several generators
+                                 in one clip (idle = biped_idle + tail_wag + head_tilt); use distinct bones per layer
 
 Bone generators key CONTROL bones (IK feet, FK chains). The glTF exporter samples the evaluated pose,
 so deform bones receive the motion; optionally bake with bake_to_deform().
-All rotations in degrees; locations in metres in the bone's local space.
+All rotations in degrees; locations in metres in the bone's local space. Axis parameters (forward_axis, up_axis,
+pitch_axis, head_axis, breath_axis, sway_axis, axis) name the CONTROL bone's local axes: read them from the rig
+(e.g. Rigify torso/IK controls are world-aligned, so a +X-facing rig pitches around "Y").
 """
 import importlib.util
 import math
@@ -124,9 +128,10 @@ def quadruped_walk(rig, b, p, fps, cyc, loop):
         if b.get("body"):
             pb = rig.pose.bones[b["body"]]
             key_loc(pb, [0, 0, bounce * math.sin(4 * math.pi * u)], fr)
-            key_rot(pb, [pitch * math.sin(2 * math.pi * u), 0, 0], fr)
+            key_rot(pb, axis_vec(p.get("pitch_axis", "X"), pitch * math.sin(2 * math.pi * u)), fr)
         if b.get("head"):
-            key_rot(rig.pose.bones[b["head"]], [p.get("head_bob_deg", 3) * math.sin(4 * math.pi * u + 0.5), 0, 0], fr)
+            key_rot(rig.pose.bones[b["head"]],
+                    axis_vec(p.get("head_axis", "X"), p.get("head_bob_deg", 3) * math.sin(4 * math.pi * u + 0.5)), fr)
 
 
 def quadruped_trot(rig, b, p, fps, cyc, loop):
@@ -157,9 +162,10 @@ def biped_idle(rig, b, p, fps, cyc, loop):
     for i, fr in enumerate(frames):
         u = (i % n) / n
         if b.get("chest"):
-            key_rot(rig.pose.bones[b["chest"]], [p.get("breath_deg", 1.5) * math.sin(2 * math.pi * u), 0, 0], fr)
+            key_rot(rig.pose.bones[b["chest"]],
+                    axis_vec(p.get("breath_axis", "X"), p.get("breath_deg", 1.5) * math.sin(2 * math.pi * u)), fr)
         if b.get("body"):
-            key_loc(rig.pose.bones[b["body"]], [p.get("sway", 0.005) * math.sin(2 * math.pi * u), 0, 0], fr)
+            key_loc(rig.pose.bones[b["body"]], axis_vec(p.get("sway_axis", "X"), p.get("sway", 0.005) * math.sin(2 * math.pi * u)), fr)
 
 
 def oscillate(rig, bone_names, axis, amp, fps, cyc, loop, phase_step=0.0, cycles=1.0):
@@ -305,9 +311,12 @@ def run(args: dict) -> dict:
     ad = target.animation_data or target.animation_data_create()
     name = args.get("action") or f"AN_{gen}"
     old = bpy.data.actions.get(name)
-    if old:
-        bpy.data.actions.remove(old)
-    ad.action = bpy.data.actions.new(name)
+    if old and args.get("append"):
+        ad.action = old
+    else:
+        if old:
+            bpy.data.actions.remove(old)
+        ad.action = bpy.data.actions.new(name)
     fn = GENERATORS[gen]
     if gen == "pose_keys":
         fn(target, args.get("bones", {}), args.get("params", {}), fps, cyc, loop, keys=args.get("keys"))
