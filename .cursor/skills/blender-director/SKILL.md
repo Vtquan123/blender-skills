@@ -68,6 +68,7 @@ Rules:
 - Save `checkpoints/NN_<stage>.blend` and update `state.json` after every stage; resume from the last passed checkpoint.
 - Stop and ask when a required spec field is missing before an irreversible step.
 - A stage counts as done only after its gate passes on measured scene data, not when a script returns without error.
+- In a project, read `PROJECT.md` first; respect its constraints, log every change in its changelog, keep `working/recipe.json` able to rebuild the project (`references/production-mode.md` §5).
 - Decide how a model moves from the structure analysis, not from its name or a category preset (presets are priors); ask the user only where the analysis is not decisive or the choice changes the result (`references/motion-analysis.md`).
 
 Full protocol, strategy table and gate list: `references/production-mode.md`.

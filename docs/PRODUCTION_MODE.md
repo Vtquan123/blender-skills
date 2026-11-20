@@ -22,7 +22,9 @@ python3 production/scripts/project_init.py --workspace ~/3d-production --name ca
     --source ~/models/calicocat_3d.glb --preset web-desktop --category cat
 ```
 
-This creates `projects/calico_cat/` with `input/` (a **copy** of your model plus `MANIFEST.json` checksums — the original is never touched), `output-spec.yaml`, `plan.yaml`, `state.json`, and empty `working/ textures/ reports/ checkpoints/ output/`.
+This creates `projects/calico_cat/` with `input/` (a **copy** of your model plus `MANIFEST.json` checksums — the original is never touched), `output-spec.yaml`, `plan.yaml`, `state.json`, **`PROJECT.md`** (the project's memory), **`working/recipe.json`** (the rebuild steps) and empty `textures/ reports/ checkpoints/ output/`.
+
+`PROJECT.md` is read by the agent first in every session: what the model is, the status, **your constraints and preferences** (write your own there — "no face animation", "keep the approved walk"), decisions, a changelog of every change (your feedback, cause, fix, numbers before → after) and open issues. `working/recipe.json` lists the repo scripts and arguments that rebuild the project from `input/`; your model's specifics are data in `working/`, the code stays shared.
 
 Edit `output-spec.yaml` (or let the agent ask you): target devices, triangle/texture/file-size budgets, the clips you want, and acceptance thresholds. **A value left `null` is never invented** — the agent asks, or reports the measurement and leaves the decision to you.
 
@@ -80,6 +82,9 @@ Record an approval: `python3 production/scripts/validation/gates.py approve --pr
 | `reports/runtime/*.png` | Frames from the headless three.js check |
 | `reports/preview/*.mp4` | Preview clips rendered in Blender (`preview_render.py`) |
 | `checkpoints/NN_stage.blend` | Resume points; the run continues from the last good one |
+| `PROJECT.md` | Project memory: model, status, constraints, decisions, changelog, open issues |
+| `working/recipe.json`, `working/*.json` | Rebuild steps and their arguments; replay with `run_recipe.py` |
+| `reports/recipe_run.json` | Last replay: steps, timings, values passed between steps |
 
 Example (test run, calico cat): 58 MB / 1.94 M triangles → 0.94 MB / 23.8 k triangles, 45 deform bones, idle + walk, 1 draw call, 2.4 mm max difference between Blender and three.js.
 

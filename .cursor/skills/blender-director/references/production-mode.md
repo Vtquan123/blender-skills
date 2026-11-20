@@ -74,7 +74,17 @@ Gate runner: `production/scripts/validation/gates.py`. Each gate writes `reports
 {"gate": "G2", "status": "pass|fail|needs_review", "metrics": {}, "thresholds": {}, "notes": [], "checkpoint": "checkpoints/03_geometry.blend"}
 ```
 
-## 5. State and Resume
+## 5. Project Memory, Recipe, State and Resume
+
+**`PROJECT.md` — read first, every session.** Created by `project_init.py` from `production/templates/PROJECT.md`. Holds what the model is, status, the user's constraints and preferences, decisions, a changelog and open issues. Rules:
+- Read it before any other project file or MCP call; it is the context a new session or another agent lacks.
+- Never act against section 3 (constraints and preferences). If a new request conflicts with one, quote the constraint and ask.
+- Record in section 3 every preference the user states in chat ("no face animation", "keep the approved walk", "do not push").
+- After every change append a changelog entry: what the user asked or reported, the cause found, what changed (files, parameters, repo scripts), measured result before → after. Update sections 2 and 6.
+
+**`working/recipe.json` — the rebuild.** The ordered steps (repo script + arguments) that turn `input/` into the deliverables; long arguments sit in `working/*.json` and are referenced (`args_file`, `args_key`). Values flow between steps with placeholders (`${project}`, `${scene_meshes}`, `${out.<step>.<key>}`). `production/scripts/blender/run_recipe.py` replays it in Blender (`from` / `to` / `only` / `dry_run`), writes `reports/recipe_run.json` and prints the external commands (optimize, G6, G7). Keep the recipe current as you work: a step that only exists in a chat cannot be rebuilt.
+- Project specifics are data (recipe, argument files), never edits to repo scripts. Code needed by this model only goes to `working/scripts/` with a changelog note; anything reusable goes into the repo with a test.
+
 
 `state.json` (written by `production/scripts/blender/u3d_common.py`):
 
@@ -91,6 +101,7 @@ Gate runner: `production/scripts/validation/gates.py`. Each gate writes `reports
 ```
 
 Resume protocol:
+0. Read `PROJECT.md` (constraints, open issues, last changelog entries).
 1. Read `state.json`; find the first stage whose status is not `passed`.
 2. Open `last_good_checkpoint` in Blender (via MCP) — never re-import the source.
 3. Re-run that stage only; then its gate.

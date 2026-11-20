@@ -1,0 +1,6 @@
+{
+  "schema": 1,
+  "notes": "Ordered steps that rebuild this project from input/. Each step runs a repo script (path relative to production/scripts) with its arguments. Placeholders: ${project}, ${repo}, ${scene_meshes} (mesh objects of the step's scene), ${out.<step id>.<key>} (a value returned by an earlier step). Run with production/scripts/blender/run_recipe.py; external steps are printed as shell commands.",
+  "steps": [],
+  "external": []
+}

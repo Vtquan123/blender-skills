@@ -4,7 +4,8 @@
     python3 production/scripts/project_init.py --workspace ~/3d-production-workspace \
         --name calico_cat --source /path/to/calicocat_3d.glb [--preset web-desktop] [--category cat]
 
-Creates projects/<name>/{input,working,output,textures,reports,checkpoints}, COPIES the source into
+Creates projects/<name>/{input,working,output,textures,reports,checkpoints}, PROJECT.md (project memory, read
+first by the agent) and working/recipe.json (rebuild steps), COPIES the source into
 input/ (the original is never moved or modified), records its SHA-256, and writes:
   output-spec.yaml   (template, with preset/category values merged when given and PyYAML is available)
   plan.yaml          (template)
@@ -97,6 +98,18 @@ def main(argv=None):
     plan_path = os.path.join(proj, "plan.yaml")
     if not os.path.exists(plan_path):
         shutil.copy2(os.path.join(TPL, "plan.yaml"), plan_path)
+
+    # project memory (read first by the agent) and the rebuild recipe
+    pm = os.path.join(proj, "PROJECT.md")
+    if not os.path.exists(pm):
+        t = open(os.path.join(TPL, "PROJECT.md")).read()
+        t = (t.replace("{{name}}", a.name).replace("{{source}}", os.path.basename(src))
+              .replace("{{created}}", datetime.now().strftime("%Y-%m-%d")))
+        open(pm, "w").write(t)
+    rc = os.path.join(proj, "working", "recipe.json")
+    if not os.path.exists(rc):
+        shutil.copy2(os.path.join(TPL, "recipe.json"), rc)
+    os.makedirs(os.path.join(proj, "working", "scripts"), exist_ok=True)
 
     state_path = os.path.join(proj, "state.json")
     if not os.path.exists(state_path):

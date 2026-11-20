@@ -13,6 +13,7 @@ Format: [Semantic Versioning](https://semver.org/) — `Major.Minor.Patch`
 - **New motion types:** `rigid_rig.py` (ball: roll/squash/spin; vehicle: body, wheels, steering, optional cut of fused wheels), `chain_rig.py` (plants, snakes, ropes along the measured skeleton), generators `ball_roll`, `ball_bounce`, `ball_throw` (drop/toss, bounces away, rolls to a stop), `vehicle_drive`, `wind_sway`
 - `preview_render.py`: `follow_bone` for clips whose root travels (camera follows horizontally, ground grows with the travel), `checker_m`; framing taken from the rest pose
 - Test asset: procedural baseball (regulation size, seam and 108 chevron stitches)
+- **Project memory and rebuild:** every project gets `PROJECT.md` (model, status, the user's constraints and preferences, decisions, changelog, open issues — read first, updated after every change) and `working/recipe.json` (repo scripts + arguments that rebuild it); `production/scripts/blender/run_recipe.py` replays a recipe and logs `reports/recipe_run.json`. Tested by rebuilding the baseball project from its files alone (identical impacts and travel; G6 0 errors, G7 0.71 mm)
 - `skin_weights.py`: distance-weight fallback when bone heat fails
 - `production/tests/`: procedural test assets (ball, car as parts and fused, tree, chest, snake) with `run_structure_tests.py` and `run_rig_tests.py`
 

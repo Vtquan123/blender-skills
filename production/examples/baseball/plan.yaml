@@ -1,0 +1,65 @@
+# Production Plan — baseball
+project: baseball
+strategy: rigid_whole/round
+structure: reports/structure.json
+decisions:
+- id: archetype
+  answer: rigid_whole/round
+  by: measured
+  at: '2026-11-20'
+- id: forward
+  answer: X
+  by: 'default (round: travel direction is free)'
+  at: '2026-11-20'
+- id: clips
+  answer:
+  - drop_bounce
+  by: user
+  at: '2026-11-20'
+category: null
+stages:
+- id: intake
+  enabled: true
+  skill: asset-intake
+  gate: G0
+- id: geometry
+  enabled: false
+  skill: null
+  gate: G2
+  params: {}
+- id: surface
+  enabled: false
+  skill: texture-workflow
+  gate: G3
+  params: {}
+- id: rig
+  enabled: true
+  skill: deformation-prep (rigid_rig.py kind=ball)
+  gate: G4b n/a (no skin)
+  params:
+    regions: {}
+- id: animation
+  enabled: true
+  skill: animation
+  gate: G5
+  params:
+    clips: []
+- id: lod
+  enabled: false
+  skill: lod-pipeline
+  gate: G2
+- id: export
+  enabled: true
+  skill: web-export
+  gate:
+  - G6
+  - G7
+- id: deliver
+  enabled: true
+  skill: qa-review
+  gate: G8
+approvals:
+- G1
+open_questions: []
+approved_by: user (chat)
+approved_at: '2026-11-20'

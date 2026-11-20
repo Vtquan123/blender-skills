@@ -1,0 +1,16 @@
+{
+ "drop_bounce": {
+  "generator": "ball_throw",
+  "action": "AN_drop_bounce",
+  "fps": 30,
+  "params": {
+   "drop_height": 1.0,
+   "speed": 1.2,
+   "restitution": 0.55,
+   "friction": 0.12,
+   "rolling_decel": 0.6,
+   "squash_max": 0.18,
+   "squash_per_mps": 0.04
+  }
+ }
+}

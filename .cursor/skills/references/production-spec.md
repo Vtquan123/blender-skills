@@ -58,6 +58,23 @@ source:
 
 `type: none` makes the director pause the animation stage and send a source request (see `animation/references/reference-driven-motion.md`).
 
+## PROJECT.md and working/recipe.json
+
+`PROJECT.md` (template `production/templates/PROJECT.md`): model · status · constraints and preferences · decisions · changelog · open issues · files. Human-readable; read first, updated after every change.
+
+`working/recipe.json` (template `production/templates/recipe.json`, runner `production/scripts/blender/run_recipe.py`):
+
+```json
+{"schema": 1,
+ "steps": [
+   {"id": "intake", "script": "blender/intake.py", "args": {"source": "${project}/input/model.glb", "project_dir": "${project}", "keep_scene": true}},
+   {"id": "structure", "script": "blender/structure_analysis.py", "scene": "${out.intake.scene}", "args": {"objects": "${scene_meshes}", "project_dir": "${project}"}},
+   {"id": "clip", "script": "motion/generators.py", "args_file": "working/clips.json", "args_key": "drop_bounce", "args": {"target": "${out.rig.rig}"}},
+   {"id": "export", "script": "blender/export_glb.py", "reset_pose": "${out.rig.rig}", "args": {"filepath": "${project}/output/model.master.glb"}, "checkpoint": "checkpoints/06_animation.blend"}],
+ "external": [{"id": "G6", "cmd": "node production/scripts/node/validate_gltf.mjs --in ${project}/output/model.glb --gate ${project}/reports/gate-G6.json"}]}
+```
+Step keys: `id`, `script` (relative to `production/scripts`), `args`, `args_file` + `args_key`, `scene` (+ `create_scene`), `reset_pose`, `checkpoint`, `skip`.
+
 ## plan.yaml (director)
 
 ```yaml

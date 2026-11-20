@@ -1,0 +1,91 @@
+{
+ "schema": 1,
+ "notes": "Rebuilds the baseball from input/baseball.glb: intake, structure analysis, ball rig, drop-and-bounce clip, GLB + Blender samples; then the external web steps. Placeholders as in production/templates/recipe.json.",
+ "steps": [
+  {
+   "id": "intake",
+   "script": "blender/intake.py",
+   "args": {
+    "source": "${project}/input/baseball.glb",
+    "project_dir": "${project}",
+    "keep_scene": true
+   }
+  },
+  {
+   "id": "structure",
+   "script": "blender/structure_analysis.py",
+   "scene": "${out.intake.scene}",
+   "args": {
+    "objects": "${scene_meshes}",
+    "project_dir": "${project}"
+   }
+  },
+  {
+   "id": "rig",
+   "script": "blender/rigid_rig.py",
+   "scene": "${out.intake.scene}",
+   "args": {
+    "kind": "ball",
+    "objects": "${scene_meshes}",
+    "structure": "${project}/reports/structure.json",
+    "forward": "X",
+    "name": "RIG_baseball"
+   }
+  },
+  {
+   "id": "drop_bounce",
+   "script": "motion/generators.py",
+   "scene": "${out.intake.scene}",
+   "args_file": "working/clips.json",
+   "args_key": "drop_bounce",
+   "args": {
+    "target": "${out.rig.rig}"
+   },
+   "checkpoint": "checkpoints/06_animation.blend"
+  },
+  {
+   "id": "export",
+   "script": "blender/export_glb.py",
+   "scene": "${out.intake.scene}",
+   "reset_pose": "${out.rig.rig}",
+   "args": {
+    "filepath": "${project}/output/baseball.master.glb",
+    "clips": [
+     "AN_drop_bounce"
+    ],
+    "fps": 30,
+    "max_influences": 4,
+    "deform_bones_only": true,
+    "project_dir": "${project}"
+   }
+  },
+  {
+   "id": "samples",
+   "script": "blender/sample_vertices.py",
+   "scene": "${out.intake.scene}",
+   "reset_pose": "${out.rig.rig}",
+   "args": {
+    "armature": "${out.rig.rig}",
+    "meshes": "${scene_meshes}",
+    "clips": [
+     "AN_drop_bounce"
+    ],
+    "out": "${project}/reports/blender-samples.json"
+   }
+  }
+ ],
+ "external": [
+  {
+   "id": "optimize",
+   "cmd": "node production/scripts/node/optimize.mjs --in ${project}/output/baseball.master.glb --out ${project}/output/baseball.glb --spec ${project}/output-spec.yaml --report ${project}/reports/optimize.json"
+  },
+  {
+   "id": "G6",
+   "cmd": "node production/scripts/node/validate_gltf.mjs --in ${project}/output/baseball.glb --gate ${project}/reports/gate-G6.json"
+  },
+  {
+   "id": "G7",
+   "cmd": "node production/scripts/validation/runtime_check.mjs --glb ${project}/output/baseball.glb --samples ${project}/reports/blender-samples.json --spec ${project}/output-spec.yaml --gate ${project}/reports/gate-G7.json --shots ${project}/reports/runtime"
+  }
+ ]
+}

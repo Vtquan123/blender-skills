@@ -1,0 +1,72 @@
+# Output Specification for baseball — preset web-desktop; edited: real size, WebP (no ktx CLI), clip drop_bounce, approvals G1 only (rigid model: no joints to approve).
+asset:
+  name: baseball
+  category: null
+  real_size_m: 0.0732
+target:
+  platform: web
+  renderer: three.js
+  devices:
+  - desktop
+budgets:
+  triangles: 40000
+  max_bones: 100
+  max_influences: 4
+  textures:
+    max_size: 2048
+    format: webp
+  materials: 2
+  draw_calls: 8
+  file_size_mb: 8
+geometry:
+  strategy: auto
+  preserve:
+  - silhouette
+  - uv_seams
+surface:
+  uv: auto
+  bake_maps:
+  - basecolor
+  - normal
+  - orm
+rig:
+  required: auto
+  method: rigid_parts
+  template: null
+  regions: {}
+animation:
+  fps: 30
+  clips:
+  - name: drop_bounce
+    loop: false
+    root_motion: true
+    source:
+      type: text
+      description: Falls from 1 m, bounces away with shrinking hops, rolls to a stop
+      status: approved
+lod:
+  levels: []
+compression:
+  geometry: meshopt
+  textures: webp
+acceptance:
+  approve_at:
+  - G1
+  G2:
+    silhouette_max_dev: null
+  G3:
+    uv_overlap_max: null
+  G4c:
+    volume_loss_max: null
+    pinch_max: null
+    stretch_max: null
+    self_intersections_max: null
+  G5:
+    loop_seam_max_deg: null
+    foot_slide_max_m: null
+  G6:
+    validator_errors_max: 0
+  G7:
+    file_size_mb_max: 8
+    draw_calls_max: 8
+    max_vertex_dev_m: null

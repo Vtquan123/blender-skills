@@ -24,6 +24,7 @@ docs/BLENDER_MCP_SETUP.md
 7. For reference tasks, also run `references/visual-match-checklist.md`
 8. Use naming conventions from `references/naming-conventions.md`
 9. **Existing model + output spec:** use blender-director Production Mode (`blender-director/references/production-mode.md`); scripts live in `production/`
+10. **Inside a project folder (`projects/<name>/`):** read its `PROJECT.md` before anything else; respect its constraints; append a changelog entry after every change; keep `working/recipe.json` current (rebuild with `production/scripts/blender/run_recipe.py`)
 
 ## MCP Setup
 
