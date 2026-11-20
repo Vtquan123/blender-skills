@@ -164,7 +164,14 @@ def refine_limbs(mesh, arm, opts):
     amw = arm.matrix_world
     seg = {n: (np.array(amw @ arm.data.bones[n].head_local), np.array(amw @ arm.data.bones[n].tail_local)) for n in names}
     prefixes = tuple(opts.get("limb_prefixes", ["DEF-upper_arm", "DEF-forearm", "DEF-hand", "DEF-thigh", "DEF-shin", "DEF-foot"]))
-    limb = np.array([n.startswith(prefixes) for n in names])
+    limb_set = {n for n in names if n.startswith(prefixes)}
+    # everything below a limb bone is limb too (toes, paws, digits), whatever its name — a toe counted as
+    # body would be re-mapped to the hip helper and the paw would swing with the hip
+    for n in list(limb_set):
+        limb_set |= {c.name for c in arm.data.bones[n].children_recursive if c.use_deform}
+    for hn in (arm.get("u3d_helpers") or {}).values():
+        limb_set.add(hn)
+    limb = np.array([n in limb_set for n in names])
     body = ~limb
     total0 = W.sum(1, keepdims=True)
     moved = {}
@@ -330,6 +337,45 @@ def attach_rigid_objects(arm, parts):
     return out
 
 
+def _far_weights(mesh, arm, gidx, share=0.2, ratio=3.0, min_rel=0.08):
+    """Vertices with ≥ `share` weight on a bone far from them: farther than `ratio` × the distance to the nearest
+    deform bone and than `min_rel` × the mesh size. Catches a paw re-mapped to a hip bone, a hand weighted to the
+    other arm, a head following a foot — skin that will slide off its limb when posed."""
+    import numpy as np
+    me = mesh.data
+    nv = len(me.vertices)
+    co = np.empty(nv * 3); me.vertices.foreach_get("co", co); co = co.reshape(-1, 3)
+    mw = np.array(mesh.matrix_world); P = co @ mw[:3, :3].T + mw[:3, 3]
+    size = float(np.linalg.norm(P.max(0) - P.min(0)))
+    amw = arm.matrix_world
+    names = sorted(set(gidx.values()))
+    D = {}
+    for n in names:
+        b = arm.data.bones[n]
+        a = np.array(amw @ b.head_local); t = np.array(amw @ b.tail_local); ab = t - a
+        u = np.clip(((P - a) @ ab) / max(ab @ ab, 1e-12), 0, 1)
+        D[n] = np.linalg.norm(P - (a + u[:, None] * ab), axis=1)
+    nearest = np.min(np.stack([D[n] for n in names], 1), 1) if names else np.zeros(nv)
+    # a half-rotation helper stands in for its limb's upper segment: measure it against that segment too
+    for limb, h in (arm.get("u3d_helpers") or {}).items():
+        if h in D:
+            seg = [n for n in names if n == limb or (n.startswith(limb + ".") and n[len(limb) + 1:].isdigit())]
+            for n in seg:
+                D[h] = np.minimum(D[h], D[n])
+    bad = set()
+    bones = {}
+    for v in me.vertices:
+        for g in v.groups:
+            n = gidx.get(g.group)
+            if n is None or g.weight < share:
+                continue
+            dist = D[n][v.index]
+            if dist > ratio * max(nearest[v.index], 1e-4) and dist > min_rel * size:
+                bad.add(v.index)
+                bones[n] = bones.get(n, 0) + 1
+    return len(bad), dict(sorted(bones.items(), key=lambda x: -x[1])[:6])
+
+
 def check(mesh, arm, max_inf):
     deform = {b.name for b in arm.data.bones if b.use_deform}
     gidx = {g.index: g.name for g in mesh.vertex_groups if g.name in deform}
@@ -348,7 +394,8 @@ def check(mesh, arm, max_inf):
     has_mod = any(m.type == "ARMATURE" and m.object == arm for m in mesh.modifiers)
     used = {gidx[g.group] for v in mesh.data.vertices for g in v.groups if g.group in gidx and g.weight > 0.01}
     unused = sorted(deform - used)
-    return {"armature_modifier": has_mod, "deform_bones": len(deform), "deform_bones_without_weights": unused,
+    far, far_bones = _far_weights(mesh, arm, gidx)
+    return {"far_weight_verts": far, "far_weight_bones": far_bones, "armature_modifier": has_mod, "deform_bones": len(deform), "deform_bones_without_weights": unused,
             "unweighted_verts": unweighted,
             "verts_over_max_influences": over, "max_influences_found": worst,
             "unnormalized_verts": unnorm, "max_influences_allowed": max_inf}
@@ -375,7 +422,11 @@ def run(args: dict) -> dict:
         notes.append("more than 25% of deform bones have no weights: automatic weights collapsed "
                      "(check that the rig overlaps the mesh — an unapplied metarig transform displaces the "
                      "generated rig — and Blender's bone-heat warnings)")
-    status = "pass" if (m["armature_modifier"] and m["unweighted_verts"] == 0 and not collapsed and
+    far_bad = m["far_weight_verts"] > 0.002 * max(len(mesh.data.vertices), 1)
+    if far_bad:
+        notes.append(f"{m['far_weight_verts']} vertices carry weight from distant bones {m['far_weight_bones']}: "
+                     "they will slide off their limb when posed (e.g. paws mapped to a hip helper)")
+    status = "pass" if (m["armature_modifier"] and m["unweighted_verts"] == 0 and not collapsed and not far_bad and
                         m["verts_over_max_influences"] == 0 and m["unnormalized_verts"] == 0) else "fail"
     gate = {"gate": "G4b", "status": status, "metrics": m, "notes": notes, "at": C.now_iso()}
     if args.get("project_dir"):

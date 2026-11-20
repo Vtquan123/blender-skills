@@ -45,6 +45,7 @@ Scripts live in `production/scripts/blender/` and expose `run(args) -> dict` (se
 | Elbow/knee collapses when bent | More loops at the joint (3 + supports), check weight gradient |
 | Wrist/forearm "candy-wrapper" on twist | Twist bones splitting rotation; loops along the segment |
 | Belly, armpit or groin folds/flips while walking (chubby body, short legs) | Half-rotation helpers at limb roots + `refine` (`helpers`, `helper_upper_share`, side split); measure with `deform_check.py` (`references/limb-junctions.md`) |
+| Paws skew or slide off the leg after a weight change | A paw/toe weighted to a distant bone (e.g. a hip helper); G4b `far_weight_verts` shows it — refine must treat every bone below a limb as limb |
 | Hard accessory bends with skin | Make it a rigid part weighted 1.0 to one bone |
 | Wing/limb fused to body must open | Separate geometry and rebuild hidden surface + texture — ask the user first |
 | Action pose (leap) as bind pose | Ask: rig as-is, re-pose to neutral (expect cleanup), or neutral asset from the user |

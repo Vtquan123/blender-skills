@@ -29,7 +29,11 @@ Bone heat gives the hip and shoulder region a gradient between body bones and th
 |---------|---------------|-------------|---------------|
 | Bone heat + smoothing (before) | 599 | 345 | 19 |
 | + chest/belly transfers, junction smoothing | 553–1029 | 300–482 | 16–29 |
-| + hip/shoulder helpers | 319 | 155 | 15 |
-| + helpers, `helper_upper_share` 0.9, side margin 0.002 | 142 | 53 | 6 |
+| + hip/shoulder helpers | 310 | 149 | 15 |
+| + helpers, `helper_upper_share` 0.9, side margin 0.002 | 143 | 53 | 6 |
 
 Visible creases on chest, belly and flanks were gone; the remaining fold vertices sit on the inner legs at the groin (hidden from the side). Blender ↔ three.js stayed at 0.2 mm on the walk.
+
+## Pitfall: bones below the limb counted as body
+
+The first version classed limb bones by name prefix, so the toe bones (`DEF-f_toe`, `DEF-r_toe`) counted as body. Paw vertices weighted to a toe were then re-mapped to the hip helper (72 % of the paw), and the paws swung with the hip instead of the foot — visibly skewed paws while walking (user report). `refine` now treats every deform descendant of a limb bone as limb. G4b (`skin_weights.py` check) also counts **far weights**: vertices with ≥ 20 % weight on a bone more than 3× farther than their nearest deform bone (and > 8 % of the mesh size); a helper is measured against the upper segment it stands in for. More than 0.2 % of the vertices fails the gate (the simulated paw bug: 377 vertices; the fixed kitten: 10). After any weight change, also check the paws with a rigid fit of the lowest vertices per leg against rest (yaw/roll should stay near 0°).
