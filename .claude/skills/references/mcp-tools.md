@@ -111,6 +111,17 @@ bpy.ops.export_scene.fbx(
 
 Adjust axis settings per target engine — see `export-pipeline`. For GLB/web use `web-export` (`production/scripts/blender/export_glb.py`).
 
+## Images and Long Calls (verified in the Phase 7 test run)
+
+- **Saving images from code:** `bpy.ops.screen.screenshot_area` writes a 1×1 PNG when called through MCP (no window redraw). Use a viewport render instead:
+  ```python
+  with bpy.context.temp_override(area=area, region=region):
+      bpy.ops.render.opengl(write_still=False, view_context=True)   # includes overlays (wireframe, bones)
+  bpy.data.images["Render Result"].save_render(path)
+  ```
+  `get_screenshot_of_area_as_image` (the tool) is fine for looking; it can show a stale frame right after `frame_set` — call `bpy.ops.wm.redraw_timer(type='DRAW_WIN_SWAP', iterations=1)` first.
+- **Calls longer than ~80 s** (the first Cycles GPU bake compiles Metal kernels) time out on the client while Blender keeps working. Do not resend: poll for the output files, then query Blender. Later bakes in the same session take seconds.
+
 ## Community Server Mapping (ahujasid `blender-mcp`)
 
 | Purpose | Official server | Community server |

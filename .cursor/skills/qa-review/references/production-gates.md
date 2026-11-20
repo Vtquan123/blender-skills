@@ -17,19 +17,21 @@ A stage is "done" only when its gate is `pass`, or `needs_review` and the user a
 
 ## Gate → Metrics → Producer
 
-| Gate | Metrics | Produced by |
-|------|---------|-------------|
-| G0 | import_ok, missing_images, components_raw/welded, boundary_edges_welded | `scripts/blender/intake.py` |
-| G1 | required_fields_missing, strategy_conflicts | `scripts/validation/gates.py plan` |
-| G2 | triangles, nonmanifold_edges, transforms_applied, silhouette_dev | `scripts/blender/mesh_metrics.py` |
-| G3 | uv_overlap_ratio, maps_present, maps_empty, materials | `scripts/blender/mesh_metrics.py`, `bake_maps.py` |
-| G4a | per-joint rings/tri_ratio/poles | `scripts/blender/joint_analysis.py` |
-| G4b | unweighted_verts, max_influences, unnormalized_verts, rigid_parts_ok | `scripts/blender/skin_weights.py` (`mode: check`) |
-| G4c | per-joint volume_loss, stretch_max, twist_collapse, self_intersections, rigid_gap, jitter | `scripts/blender/rom_test.py` |
-| G5 | clips_missing, fps, loop_seam_delta, foot_slide, similarity (user) | `scripts/blender/anim_check.py` |
-| G6 | validator_errors, validator_warnings, axis_ok, scale_ok | `scripts/node/validate_gltf.mjs` |
-| G7 | bytes, draw_calls, triangles, texture_bytes_gpu, clips_play, max_vertex_dev | `scripts/validation/runtime_check.mjs` |
-| G8 | input_checksums_ok, report_complete | `scripts/validation/gates.py final` |
+| Gate | Metrics written to `reports/gate-<id>.json` | Thresholds read from `output-spec.yaml` | Produced by |
+|------|------------------------------------------------|----------------------------------------|-------------|
+| G0 | import_ok, triangles, components_raw/welded, boundary_edges_welded, missing_images | — (issues listed in `input-spec.yaml`) | `production/scripts/blender/intake.py` |
+| G1 | required_fields_missing, strategy_conflicts | required spec fields | `production/scripts/validation/gates.py plan` |
+| G2 | triangles, nonmanifold_edges, transforms_applied, components, silhouette_max_ratio / p95_m / max_m | `budgets.triangles` → `triangles_max`, `acceptance.G2.silhouette_max_dev` (fraction of source bbox diagonal) | `production/scripts/blender/mesh_metrics.py` (`gate: G2`, with `source`) |
+| G3 | uv_layers, uv_overlap_ratio, uv_coverage, materials, maps_present, maps_empty | `acceptance.G3.uv_overlap_max`, `budgets.materials` → `materials_max`; empty maps always fail | `production/scripts/blender/mesh_metrics.py` (`gate: G3`, with the `bake_maps.py` result as `bake`) |
+| G4a | joints_checked, joints_failing (+ per-joint rings, tri_ratio, poles in `joint-report.json`) | joint rules from the category preset | `production/scripts/blender/joint_analysis.py` |
+| G4b | unweighted_verts, max_influences_found, verts_over_max_influences, unnormalized_verts | `budgets.max_influences` | `production/scripts/blender/skin_weights.py` (`mode: check`) |
+| G4c | per-joint volume_loss, pinch, stretch_max, self_intersections, worst_frame | `acceptance.G4c.*` | `production/scripts/blender/rom_test.py` |
+| G5 | clips (duration, loop seam, foot slide), missing; similarity to source is a user decision | `acceptance.G5.*` | `production/scripts/blender/anim_check.py` |
+| G6 | validator_errors, validator_warnings, extensions_used, animation_count, skin_count, total_triangles | `acceptance.G6.validator_errors_max` | `production/scripts/node/validate_gltf.mjs` |
+| G7 | bytes, file_size_mb, draw_calls, triangles, textures, load_ms, clips, max_vertex_dev_m, rest_match_max_m, page_errors | `acceptance.G7.*` | `production/scripts/validation/runtime_check.mjs` |
+| G8 | input_checksums_ok, report_complete, gates_not_ok | — | `production/scripts/validation/gates.py final` |
+
+A threshold left `null` in the spec is never filled in by the agent: the metric is recorded and the gate is `needs_review`, so the user decides.
 
 ## Review Rules
 

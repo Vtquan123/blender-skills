@@ -76,7 +76,10 @@ When geometry was decimated or rebuilt (`asset-optimization`, `deformation-prep`
 | Normal | Selected-to-active normal, tangent space, OpenGL (+Y) for glTF | Combines source normal map detail + shape difference |
 | ORM | AO from source geometry → R; source roughness → G; source metallic → B | glTF reads occlusion R, roughness G, metallic B |
 
-Cage/extrusion from asset scale (≈ 1 % of the bbox diagonal as a start), margin ≥ 16 px, resolution from `budgets.textures.max_size`. Result checked at gate G3 (non-empty maps, no seams, screenshot vs source).
+Cage/extrusion from asset scale (≈ 1 % of the bbox diagonal as a start), margin ≥ 16 px, resolution from `budgets.textures.max_size`. Result checked at gate G3 (`mesh_metrics.py` with `gate: G3` and the bake result: non-empty maps, UV overlap, material count) plus a screenshot vs source.
+
+- Shade the target **smooth** before baking normals; a flat-shaded cage bakes the quad grid into the normal map (`bake_maps.py` warns).
+- Dense sources: bake one or two maps per MCP call; the last call (`use_existing: true`, default) packs ORM and builds the material from every map already in `textures/`. The first GPU bake of a session can exceed the MCP wait while kernels compile — poll for the PNGs instead of resending.
 
 ## Texture Atlas Strategy
 

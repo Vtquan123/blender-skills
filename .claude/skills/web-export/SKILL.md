@@ -28,10 +28,10 @@ A WebGL/WebGPU technical artist who ships 3D to product pages and web apps. Thin
 ## Core Workflow
 
 1. **Pre-flight** — `asset-optimization` PASS; transforms applied; one armature; clips named; influences ≤ 4 (`references/web-runtime-limits.md`).
-2. **Master export** — `production/scripts/blender/export_glb.py`: GLB, +Y up, no compression, animations as separate actions, deform bones only → `output/<name>.master.glb`. This file is the reproducible source for every web variant.
+2. **Master export** — `production/scripts/blender/export_glb.py`: GLB, +Y up, no compression, active scene only, tangents, animations as separate actions (`clips: [...]` keeps only the spec clips; `AN_ROM` and work actions are dropped), deform bones only → `output/<name>.master.glb`. This file is the reproducible source for every web variant.
 3. **Optimise** — `production/scripts/node/optimize.mjs` (glTF-Transform): dedup, prune, weld, resample animation, texture resize + KTX2/WebP, meshopt (or Draco per spec) → `output/<name>.glb` (`references/gltf-transform-pipeline.md`).
 4. **Validate** — `production/scripts/node/validate_gltf.mjs` (Khronos glTF-Validator, 0 errors) → gate G6.
-5. **Runtime check** — headless three.js page loads the GLB, plays every clip, records draw calls, triangles, texture memory, and compares sampled vertex positions with Blender → gate G7 (`references/threejs-integration.md`).
+5. **Runtime check** — headless three.js page loads the GLB, plays every clip, records draw calls, triangles, texture memory, and compares sampled vertex positions with Blender (`sample_vertices.py`) → gate G7 (`references/threejs-integration.md`). Needs Playwright's Chromium or installed Chrome (`--chrome`). A centimetre-level vertex deviation with a matching rest pose means B-Bones on deform bones (`references/web-runtime-limits.md`).
 6. **Hand-off** — loader snippet for the user's framework, budgets table, report.
 
 ## Technical Guidelines

@@ -35,6 +35,26 @@ Rigify metarigs shipped with Blender: Basic Human, Basic Quadruped, Human, Cat, 
 - **Fur/feathers for web:** bake surface detail to normal maps; silhouette cards with alpha are optional and count against the draw-call/overdraw budget.
 - Export DEF (deform) bones only; control rig stays in the .blend.
 
+## Template Fitting (`rig_fit.py`)
+
+Order: create → fit → prune → snap → trace → overrides → roll fix → generate. Save the arguments in `working/rig_fit_args.json` so the fit can be rebuilt exactly.
+
+| Need | Option | Notes |
+|------|--------|-------|
+| Stylised proportions (chibi, cartoon) | `fit: feet` (default for cat/wolf/horse/basic_quadruped) | Length and width from the four paw contacts, height from the torso centre between front and rear paws. A uniform bbox fit made a cat rig 2.5× too long for a big-headed kitten |
+| Web bone budget | `prune: ["face", "f_palm.*", "r_palm.*", ...]` | Deletes bones and descendants before generating. Cat: 174 → 33 metarig bones, 45 DEF bones |
+| Curved tails, necks, ears | `trace: [{bones, base, tip}]` | Walks the tube's cross-section centres from tip to base. A chain attached to its parent keeps its first head (Rigify `connect_chain`) |
+| Joints the fit cannot find | `overrides: {bone: {head, tail, parent, rigify_type}}` | World metres; creates missing bones (e.g. simple ear bones with `basic.super_copy` after pruning the face rig) |
+| Shared joints | automatic | Moving a head moves the parent's tail and children that started at the same point; Rigify refuses "disjoint" chains |
+| Twisted controls | automatic (`fix_rolls`) | Restores each bone's template X axis (bend/lateral axis) after non-uniform fitting and moves |
+| Rig displaced from mesh | automatic | The metarig's location is applied: Rigify builds from LOCAL bone positions at the world origin |
+| glTF deformation match | automatic (`flatten_bbones`) | DEF bones set to 1 B-Bone segment after generate |
+
+Placement rules learned on stylised assets:
+- Put limb joints **inside the visible limb**. On stubby legs the template's hock lands at belly height; move it just above the paw (G4a fails otherwise — the joint has no ring of loops around it).
+- Keep the natural bend direction for IK: quadruped front elbow behind the shoulder–wrist line, hind knee in front of the hip–hock line.
+- Measure before placing: slice the source mesh at a few heights (x-extent jumps where a leg joins the body) and use the slice centroids.
+
 ## Articulated Objects
 
 ### Hinge detection

@@ -34,13 +34,19 @@ If the source is unusable (subject occluded, camera shaking, too short), say exa
 
 | Family | Generators | Main parameters |
 |--------|-----------|-----------------|
-| Biped | `biped_walk`, `biped_idle`, `arm_gesture` | cycle_s, stride, arm_swing, bounce |
-| Quadruped | `quadruped_walk` (lateral sequence), `quadruped_trot`, `sit`, `tail_wag` | cycle_s, stride, leg phase offsets, spine_flex, head_bob, tail amplitude/frequency |
-| Bird | `wing_flap`, `head_tilt`, `perch_bob` | flap_hz, wing_amplitude_deg, tilt_deg |
+| Biped | `biped_walk`, `biped_idle` | cycle_s, stride, lift, arm_swing_deg, breath_deg, sway |
+| Quadruped | `quadruped_walk` (lateral sequence), `quadruped_trot`, `tail_wag` | cycle_s, stride, lift, duty, phases, bounce, body_pitch_deg, head_bob_deg, amp_deg |
+| Bird | `wing_flap`, `head_tilt`, `perch_bob` | flaps_per_cycle, amp_deg, tilt_deg, turn_deg, bob |
+| Key poses | `pose_keys` — sit, jump, gestures and anything without a cyclic generator | `keys: [{t, bones: {name: {rot, loc}}}]` |
 | Object | `hinge_open`, `turntable`, `bounce_in` | angle_deg, duration_s, easing, bounces |
-| Secondary | `follow_through` on chains (tail, ears, feathers, pages) | delay_frames, damping |
+| Secondary | `secondary` chains (follow-through on tail, ears, feathers, pages) | amp_deg, delay_frames, axis |
 
-Generators key the **control** bones (IK feet for legs), then bake to deform bones at the spec fps. Rigs without IK controls get FK keys directly.
+Generators key the **control** bones (IK feet for legs; FK chains for tail/neck). The glTF exporter samples the evaluated pose, so deform bones receive the motion (`bake_deform: true` bakes explicitly).
+
+- **Layering:** `append: true` keys into an existing action, so one clip can combine generators (idle = `biped_idle` on chest/torso + `tail_wag` + `head_tilt`). Use different bones per layer.
+- **Axes are the control's LOCAL axes.** Read them from the rig before keying (`(rig.matrix_world @ pose_bone.matrix).to_3x3()` columns). Rigify torso/chest/IK controls are world-aligned, so a rig facing +X uses `forward_axis: X`, `forward_negative: false`, `pitch_axis: Y`, `breath_axis: Y`; neck/head/tail controls bend around their X axis (lateral after `rig_fit.py` restores rolls).
+- **Scale parameters to the asset:** stride and lift are metres — a 25 cm kitten walk used stride 0.03, lift 0.012, bounce 0.002.
+- Rigify limbs must be in IK (`IK_FK = 0`, the default) for foot/hand IK keys to drive the legs.
 
 ## 4. Compare and Adjust
 

@@ -28,7 +28,7 @@ A creature/character technical director who rebuilds topology for deformation, d
 ## Core Workflow
 
 1. **Family** — read `rig.method` and the category preset: `creature` → steps 2–8; `articulated_object` → rigid parts + hinge pivots (`references/category-rigs.md`, `production/scripts/blender/hinge_rig.py`), then step 8 with hinge limits; `static_object` → stop (no rig).
-2. **Joint analysis** — place/confirm joint positions (existing rig, fitted metarig, or proposal), slice the mesh at each joint, score topology readiness (`references/joint-analysis.md`; `rig_fit.py`, `joint_analysis.py`). **User confirms joint placement.**
+2. **Joint analysis** — place/confirm joint positions (existing rig, fitted metarig, or proposal), slice the mesh at each joint, score topology readiness (`references/joint-analysis.md`; `rig_fit.py` with fit/prune/trace/overrides from `references/category-rigs.md → Template Fitting`, `joint_analysis.py`). **User confirms joint placement.**
 3. **Region strategy** — per region: skin, rigid part (weight 1.0 to one bone), or free chain (`references/region-strategy.md`).
 4. **Deform mesh** — automatic quad base (QuadriFlow or an installed remesher) at the spec budget, then enforce joint loop rules (`references/joint-loop-rules.md`; `deform_mesh.py`); shrinkwrap to source. **Gate G4a (user approves wireframe per joint).**
 5. **Surface** — UV with seams away from bend areas; bake normal/AO (and colour if UVs changed) from the source via `texture-workflow` (`bake_maps.py`).
@@ -47,6 +47,11 @@ Scripts live in `production/scripts/blender/` and expose `run(args) -> dict` (se
 | Hard accessory bends with skin | Make it a rigid part weighted 1.0 to one bone |
 | Wing/limb fused to body must open | Separate geometry and rebuild hidden surface + texture — ask the user first |
 | Action pose (leap) as bind pose | Ask: rig as-is, re-pose to neutral (expect cleanup), or neutral asset from the user |
+| Template far too long/short for a stylised body | `rig_fit.py` `fit: feet`, then `trace`/`overrides` (`references/category-rigs.md → Template Fitting`) |
+| QuadriFlow "needs to be manifold" on a clean small mesh | Edges under 0.1 mm trip Blender's check; `deform_mesh.py` remeshes an enlarged copy automatically |
+| G4b fails "weights collapsed" (many DEF bones unweighted, head moves with a paw) | The rig does not overlap the mesh — check the generated rig against the mesh; never patch weights by hand first |
+| Normal map shows the quad grid | Target was flat-shaded while baking; `deform_mesh.py` now shades smooth, re-bake normals |
+| Blender and three.js poses differ by centimetres | B-Bone segments on DEF bones; flatten (default in `rig_fit.py`) |
 
 Web runtimes use linear blend skinning and read four influences per vertex; design weights for that limit (`web-export`).
 
