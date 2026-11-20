@@ -117,8 +117,10 @@ ln -s /path/to/blender-skills/.claude/skills /path/to/codex/skills/blender-skill
       <section className="space-y-4">
         <h2 className="text-2xl font-bold tracking-tight border-b pb-2">Connect Blender MCP</h2>
         <p className="text-muted-foreground">
-          Every skill executes inside Blender via the BlenderMCP addon. Required for MCP execution —
-          without it, skills fall back to instructions only.
+          Every skill executes inside Blender via a Blender MCP add-on. Required for MCP execution —
+          without it, skills fall back to instructions only. Recommended: the official Blender Lab MCP
+          add-on (Blender 5.1+, Online Access enabled). The steps below set up the community BlenderMCP
+          add-on; see docs/BLENDER_MCP_SETUP.md in the repository for both.
         </p>
 
         <div>
@@ -172,7 +174,7 @@ curl -LsSf https://astral.sh/uv/install.sh | sh`}</CodeBlock>
                     <td className="px-4 py-2 text-muted-foreground">Cursor</td>
                   </tr>
                   <tr className="border-t">
-                    <td className="px-4 py-2 font-mono text-xs">.mcp.json + .claude/skills/</td>
+                    <td className="px-4 py-2 font-mono text-xs">MCP client config + .claude/skills/</td>
                     <td className="px-4 py-2 text-muted-foreground">Claude Code</td>
                   </tr>
                   <tr className="border-t">

@@ -2,6 +2,22 @@
 
 Planned improvements for the Blender Skills Pack.
 
+## Shipped in v1.4.0 — Production Mode
+
+- [x] Spec-driven pipeline for existing assets (`blender-director` Production Mode, gates G0–G8)
+- [x] `asset-intake`, `deformation-prep`, `web-export` + `production/` toolkit
+- [x] Pack validator `scripts/check_skills.py` and `.cursor` sync scripts
+
+Production Mode — next:
+- [ ] End-to-end runs on dog, parrot (wing separation decision) and a non-neutral pose (leaping cat)
+- [ ] KTX2 path verified with KTX-Software installed
+- [ ] `rom_test.py`: twist_collapse, rigid_gap and jitter metrics (now judged visually)
+- [ ] ROM contact sheet rendered by the script
+- [ ] Optional UniRig template path; LOD stage in a Production Mode run
+- [ ] CI job running `scripts/check_skills.py` and the headless `bpy` script tests
+
+The "v1.4.0 — Character & Creature Pipeline" items below are still planned; their version number predates this release.
+
 ## v1.2.0 — Reference & Photogrammetry
 
 - [ ] `references/photogrammetry-cleanup.md` — scan mesh cleanup workflow
@@ -36,7 +52,7 @@ Planned improvements for the Blender Skills Pack.
 
 ## Backlog
 
-- Validation script (`scripts/validate-skills.py`) for CI
+- ~~Validation script for CI~~ — shipped as `scripts/check_skills.py` (CI wiring still open)
 - GitHub Actions for SKILL.md schema lint on PRs
 - Astro documentation site (mirroring Jeffallan pattern)
 - Blender 4.x API compatibility matrix in `mcp-tools.md`

@@ -6,6 +6,33 @@ Format: [Semantic Versioning](https://semver.org/) — `Major.Minor.Patch`
 
 ---
 
+## [1.4.0] — 2026-11-20
+
+### Added
+- **Production Mode** in `blender-director`: spec-driven conversion of an existing model into a deliverable — modes ANALYZE / PLAN / PREVIEW / PRODUCTION / VALIDATE / EXPORT, gates G0–G8, checkpoints and `state.json` resume (`blender-director/references/production-mode.md`, `references/production-spec.md`)
+- **New skills:** `asset-intake` (import + measure → input spec, G0), `deformation-prep` (joint analysis, deform mesh with joint loops, rigid parts, template fitting, weights, ROM test — G4a–G4c), `web-export` (glTF-Transform, glTF-Validator, headless three.js check — G6–G7)
+- **Reference-driven motion:** ask for a video/GIF/description when a clip has no source, imitate it with parametric generators (`animation/references/reference-driven-motion.md`)
+- **`production/` toolkit:** spec templates, web presets (mobile/desktop/hero), category presets (human, dog, cat, parrot, book, box, chair, table), bird metarig, Blender scripts run through MCP (`intake`, `rig_fit`, `deform_mesh`, `joint_analysis`, `mesh_metrics`, `bake_maps`, `skin_weights`, `rom_test`, `hinge_rig`, `anim_check`, `export_glb`, `sample_vertices`), motion generators + frame extraction, Node tools (`optimize`, `validate_gltf`, `runtime_check`), gate runner and `project_init`
+- `scripts/check_skills.py` (pack validator) and `scripts/sync-skills.sh` / `.ps1`
+- `docs/PRODUCTION_MODE.md` — user guide (requirements, decisions, outputs, troubleshooting)
+- `docs/BLENDER_MCP_CAPABILITIES.md` — MCP operations verified on Blender 5.3 plus an end-to-end run on a 1.9 M-triangle model
+
+### Changed
+- Skills and references use the **official Blender Lab MCP** tool names (`execute_blender_code`, `get_objects_summary`, `get_screenshot_of_area_as_image`, …) with a mapping for the community `blender-mcp` server; `docs/BLENDER_MCP_SETUP.md` rewritten for both
+- `animation`, `rigging`, `retopology`, `texture-workflow`, `uv-workflow`, `qa-review`, `export-pipeline` extended for Production Mode (1.1.0)
+- `bake_maps.py` picks the GPU automatically (Metal/CUDA/OptiX/HIP/oneAPI)
+- Skill count **94 → 97**; references **175 → 188**
+
+### Removed
+- Plugin root `.mcp.json` (Windows-only `cmd /c uvx blender-mcp`, collided with the official add-on on port 9876); configure the MCP server in your client
+
+### Fixed
+- `dream-weirdcore-style` related skill `surreal-mood` → `dream-surreal-mood`
+- QUICKSTART plugin install id (`blender-skills@blender-skills`)
+- Found by the end-to-end test and fixed in the scripts: Rigify rig displaced from the mesh (metarig location not applied), twisted control rolls after fitting, "disjoint chain" Rigify errors after moving joints, QuadriFlow refusing small assets, faceted normal bakes, B-Bones breaking Blender↔three.js parity, empty extra glTF scene, missing tangents, work actions exported as clips, ROM test not moving IK limbs, G4b passing collapsed weights, G2/G3 gate files never written
+
+---
+
 ## [1.3.0] — 2026-07-10
 
 ### Added

@@ -1,6 +1,6 @@
-export const SITE_VERSION = '1.3.0'
-export const SKILL_COUNT = 94
-export const REF_COUNT = 175
+export const SITE_VERSION = '1.4.0'
+export const SKILL_COUNT = 97
+export const REF_COUNT = 188
 
 export const platforms = [
   {
@@ -10,7 +10,7 @@ export const platforms = [
   },
   {
     name: 'Claude Code',
-    blurb: 'Native Claude skills under `.claude/skills/` with project `.mcp.json`.',
+    blurb: 'Native Claude skills under `.claude/skills/`; register the Blender MCP server in your client config.',
     install: 'cp -r blender-skills/.claude/skills .claude/skills/',
   },
   {
@@ -49,6 +49,16 @@ export const skillCategories: SkillCategory[] = [
         desc: 'Analyzes the request, locks genre/style/world, selects specialists, outputs a production brief, and orchestrates MCP execution through validation and export.',
         tags: ['routing', 'planning', 'orchestration', 'briefs'],
       },
+    ],
+  },
+  {
+    id: 'production-mode',
+    title: 'Production Mode',
+    description: 'Spec-driven conversion of an existing model into a deliverable: measure, remesh for deformation, rig, animate, and ship an optimised web GLB through gated, resumable stages.',
+    skills: [
+      { name: 'asset-intake', desc: 'Imports and measures any source asset (GLB/FBX/OBJ/USD/STL/PLY/.blend) and writes the input spec — gate G0.', tags: ['intake', 'analysis', 'input-spec'] },
+      { name: 'deformation-prep', desc: 'Joint analysis, deform mesh with joint loops, rigid parts, Rigify template fitting, weights and range-of-motion tests — gates G4a–G4c.', tags: ['remesh', 'rigging', 'rom'] },
+      { name: 'web-export', desc: 'Master GLB → glTF-Transform (meshopt, KTX2/WebP) → glTF-Validator → headless three.js check — gates G6–G7.', tags: ['gltf', 'three.js', 'meshopt'] },
     ],
   },
   {
