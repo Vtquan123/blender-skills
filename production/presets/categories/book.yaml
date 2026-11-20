@@ -1,4 +1,4 @@
-# Category preset — starting values; output-spec.yaml overrides any field.
+# Category preset — optional prior. structure_analysis.py measurements and the user's answers win; output-spec.yaml overrides any field.
 category: book
 family: articulated_object
 template: {kind: hinge, script: production/scripts/blender/hinge_rig.py}

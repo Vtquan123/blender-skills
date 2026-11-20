@@ -62,7 +62,11 @@ source:
 
 ```yaml
 project: calico_cat
-strategy: creature_deform           # from presets/categories/<cat>.yaml family
+strategy: skinned/quadruped         # archetype from reports/structure.json (structure_analysis.py), confirmed by the user
+structure: reports/structure.json
+decisions:                          # answers to the analysis questions (never asked twice on resume)
+  - {id: forward, answer: X, by: user, at: 2026-11-20T15:00}
+  - {id: clips, answer: [idle, walk], by: user}
 stages:
   - {id: intake,    enabled: true,  skill: asset-intake,     gate: G0}
   - {id: geometry,  enabled: true,  skill: deformation-prep, gate: G4a, params: {method: retopo}}

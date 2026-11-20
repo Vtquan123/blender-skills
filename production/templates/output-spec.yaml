@@ -5,7 +5,8 @@
 
 asset:
   name: null                 # e.g. calico_cat
-  category: null             # file name in presets/categories/ (human, dog, cat, parrot, book, box, chair, table, ...)
+  category: null             # optional prior: a file in presets/categories/ (human, dog, cat, ...). Any model works without
+                             # one — the structure analysis decides how it moves and asks what it cannot measure
   real_size_m: null          # longest real-world dimension; used to normalise scale
 
 target:
@@ -34,7 +35,7 @@ surface:
 
 rig:
   required: auto             # auto | true | false
-  method: auto               # existing | rigify | custom_template | unirig | rigid_parts | none | auto
+  method: auto               # auto (from the structure analysis) | existing | rigify | custom_template | rigid_parts | chain | morph | none
   template: null             # from category preset if null
   regions: {}                # optional overrides: {wing.L: rigid|skin|chain, ...}
 

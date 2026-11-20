@@ -1,4 +1,4 @@
-# Category preset — starting values; output-spec.yaml overrides any field.
+# Category preset — optional prior. structure_analysis.py measurements and the user's answers win; output-spec.yaml overrides any field.
 category: table
 family: static_object
 template: {kind: none}

@@ -40,6 +40,9 @@ If the source is unusable (subject occluded, camera shaking, too short), say exa
 | Bird | `wing_flap`, `head_tilt`, `perch_bob` | flaps_per_cycle, amp_deg, tilt_deg, turn_deg, bob |
 | Key poses | `pose_keys` — sit, jump, gestures and anything without a cyclic generator | `keys: [{t, bones: {name: {rot, loc}}}]` |
 | Object | `hinge_open`, `turntable`, `bounce_in` | angle_deg, duration_s, easing, bounces |
+| Ball (`rigid_rig.py kind=ball`) | `ball_roll`, `ball_bounce` | speed, in_place, height, bounces, squash, stretch |
+| Vehicle (`rigid_rig.py kind=vehicle`) | `vehicle_drive` | speed, steer_deg, bob_m, bob_hz, pitch_deg, lean_deg, in_place |
+| Chains (`chain_rig.py`) | `wind_sway` — plants sway; with `axis: Z` and `phase_step` a travelling wave (snake, tentacle, flag) | amp_deg, sway_cycles, gust, taper, phase_step |
 | Secondary | `secondary` chains (follow-through on tail, ears, feathers, pages) | amp_deg, delay_frames, axis |
 
 Generators key the **control** bones (IK feet for legs; FK chains for tail/neck). The glTF exporter samples the evaluated pose, so deform bones receive the motion (`bake_deform: true` bakes explicitly).

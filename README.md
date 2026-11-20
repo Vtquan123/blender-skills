@@ -7,7 +7,7 @@
 **97 Specialized Skills for Blender Artists.**
 **Transform Cursor, Claude Code, Kiro, and Codex into your Senior Technical Art team — not a tutorial bot.**
 
-[![Version](https://img.shields.io/badge/version-1.4.0-blue.svg)](version.json)
+[![Version](https://img.shields.io/badge/version-1.5.0-blue.svg)](version.json)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Skills](https://img.shields.io/badge/skills-97-orange.svg)](.claude/skills/)
 [![Blender MCP](https://img.shields.io/badge/Blender_MCP-integrated-blueviolet.svg)](docs/BLENDER_MCP_SETUP.md)
@@ -96,7 +96,9 @@ Give an existing model and an output spec; the director plans the stages, runs r
   → web-export (glTF-Transform, glTF-Validator, headless three.js check) → qa-review (report, gate G8)
 ```
 
-Details: [production-mode.md](.claude/skills/blender-director/references/production-mode.md) · toolkit in [`production/`](production/).
+Any model, not only the ones with a preset: the structure analysis measures parts, ground contacts, limbs or branches and wheels, proposes how the model moves (rolling ball, vehicle with wheels and steering, swaying plant, slithering body, skinned creature, hinged parts) and asks only what it cannot measure — the front, cutting fused wheels, a hinge, the clip list.
+
+Details: [production-mode.md](.claude/skills/blender-director/references/production-mode.md) · [motion-analysis.md](.claude/skills/blender-director/references/motion-analysis.md) · toolkit in [`production/`](production/).
 
 #### Reference Image Matching
 

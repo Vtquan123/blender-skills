@@ -2,6 +2,19 @@
 
 Planned improvements for the Blender Skills Pack.
 
+## Shipped in v1.5.0 — Any model: analysis, questions, new motion types
+
+- [x] `structure_analysis.py`: archetypes from geometry with questions only where needed
+- [x] Rigid rigs (ball, vehicle with steering, fused-wheel cut), chain rigs (plants, snakes), their generators
+- [x] Limb-junction skinning (helper bones, refine, fold check), far-weight check, static-clip check in G7
+- [x] Procedural test assets and regression runners in `production/tests/`
+
+Next:
+- [ ] Real AI-generated vehicles, plants and props through the full pipeline (test set beyond procedural assets)
+- [ ] Hinged parts from the analysis straight into `hinge_rig.py` (hinge edge from the user's answer)
+- [ ] Morph archetype (shape keys) generator and budget check
+- [ ] Questions rendered with a coloured parts sheet
+
 ## Shipped in v1.4.0 — Production Mode
 
 - [x] Spec-driven pipeline for existing assets (`blender-director` Production Mode, gates G0–G8)

@@ -1,4 +1,4 @@
-# Category preset — starting values; output-spec.yaml overrides any field.
+# Category preset — optional prior. structure_analysis.py measurements and the user's answers win; output-spec.yaml overrides any field.
 # Plain chairs are static; set family: articulated_object in the spec for swivel or folding chairs.
 category: chair
 family: static_object

@@ -18,7 +18,7 @@ For any Blender asset task, **blender-director** analyzes the request and routes
 - **blender-director** — Pipeline planning, skill routing, production briefs
 
 ### Production Mode (existing asset → output spec)
-- **asset-intake** — Import and measure any source (GLB/FBX/OBJ/USD/STL/PLY/.blend) → input-spec, gate G0
+- **asset-intake** — Import and measure any source (GLB/FBX/OBJ/USD/STL/PLY/.blend) → input-spec, gate G0; then the structure analysis decides how it can move (creature, ball, vehicle, plant, chain, hinged parts) and generates the questions to ask (`blender-director/references/motion-analysis.md`)
 - **deformation-prep** — Joint analysis, deform mesh with joint loops, rigid parts, template fitting, weights, ROM test (G4a–G4c)
 - **web-export** — Master GLB → glTF-Transform (meshopt, KTX2/WebP) → glTF-Validator → headless three.js check (G6–G7)
 

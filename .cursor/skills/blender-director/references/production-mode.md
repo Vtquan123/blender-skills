@@ -24,7 +24,7 @@ Schemas: `../../references/production-spec.md`. Project scaffolding: `production
 
 | Mode | Runs | Stops for user |
 |------|------|----------------|
-| ANALYZE | Intake → G0 | Category, orientation and scale confirmation if intake is unsure |
+| ANALYZE | Intake → G0, then `structure_analysis.py` → `reports/structure.json` | Only the questions the analysis generates (archetype, front, fused parts, hinge, clips) — `motion-analysis.md` §3 |
 | PLAN | Strategy table → `plan.yaml` + production brief → G1 | **Always** (approve plan) |
 | PREVIEW | All enabled stages at preview settings (low remesh density, 512 px bakes, no LOD) | Shows screenshots and preview clips (`production/scripts/blender/preview_render.py`: separate scene with copies of the rig, ground, lights, follow camera, repeated clip with root motion; render in chunks, encode with ffmpeg); nothing is delivered |
 | PRODUCTION | Enabled stages from `geometry` to `animation` | At gates the spec lists in `acceptance.approve_at` |
@@ -40,9 +40,10 @@ The planner enables stages from **intake facts × output spec**. It never enable
 | `triangles` > `budgets.triangles` and asset static | `geometry.strategy: decimate` (+ bake normal from source) |
 | `triangles` > budget and asset must deform | `geometry.strategy: retopo` via `deformation-prep` (joint loops), bake from source |
 | Mesh split along UV seams (many components, many boundary edges) | Weld in intake before any analysis |
-| `rig.required: true` or clips listed for a creature | `deformation-prep` → `rigging` → `animation` |
-| Category preset `family: articulated_object` (book, box, folding chair) | Split rigid parts + hinge pivots; no skinning |
-| Category preset `family: static_object` (table) | No rig; node-transform clips only |
+| Structure archetype (`reports/structure.json`, confirmed by the user when asked) | Rig and clips per `motion-analysis.md` §2: `skinned` → `deformation-prep` → `rigging` → `animation`; `rigid_whole`/`rigid_parts` → `rigid_rig.py` or `hinge_rig.py`, no skinning; `chain_flex` → `chain_rig.py` + skin; `morph` → shape keys |
+| Category preset (`asset.category`) | Prior only: fills defaults the user has not set; when it disagrees with the structure, show both and ask |
+| `deformation_hints.short_limbs_round_body` | `helper_bones.py` + `skin_weights.py refine` (deformation-prep `limb-junctions.md`) |
+| Fused parts that must move separately (wheels, lid) | Ask before cutting (`rigid_rig.py split_wheels`); default keep fused |
 | Clip `source.type: none` | Pause animation stage, send source request (`animation/references/reference-driven-motion.md`) |
 | `lod.levels` not empty | `lod-pipeline` |
 | `target.platform: web` | `web-export` |
@@ -58,11 +59,11 @@ The planner enables stages from **intake facts × output spec**. It never enable
 | G2 | Geometry | Triangles ≤ budget; non-manifold = 0; transforms applied; silhouette deviation vs source | Spec |
 | G3 | Surface | UV overlap (unless intended); texel density; bake maps present and non-empty; material count | Spec |
 | G4a | Deform mesh | Joint loop rules met per joint; budget; silhouette | **Yes** (creatures) |
-| G4b | Rig + weights | No unweighted verts; ≤ max influences; normalized; rigid parts 1.0 to one bone | No |
+| G4b | Rig + weights | No unweighted verts; ≤ max influences; normalized; rigid parts 1.0 to one bone; far weights ≤ 0.2 % | No |
 | G4c | ROM test | Per-joint volume loss, stretch, intersections, twist collapse within spec thresholds | **Yes** (creatures) |
-| G5 | Animation | All clips present; fps/frame range; loop seam delta; foot slide; similarity sheet vs source | Spec |
+| G5 | Animation | All clips present; fps/frame range; loop seam delta; foot slide; skin folds over each clip (`deform_check.py`); similarity sheet vs source | Spec |
 | G6 | Export | glTF-Validator 0 errors; axis/scale; clip names | No |
-| G7 | Web | File size, draw calls, texture memory; headless three.js load + play every clip; Blender↔three.js vertex check | No |
+| G7 | Web | File size, draw calls, texture memory; headless three.js load + play every clip; Blender↔three.js vertex check (skinned and rigid meshes); every clip moves | No |
 | G8 | Deliver | Report complete; `input/` checksums unchanged | User reads report |
 
 Thresholds come from `output-spec.yaml → acceptance`. A missing threshold means "report the value, do not judge" — never invent one.
@@ -115,6 +116,7 @@ Scripts in `production/scripts/blender/` are plain Python modules with a `run(ar
 - G1 plan approval.
 - Any destructive step on data not yet checkpointed.
 - Joint placement (start of `deformation-prep`) and G4a/G4c for creatures.
+- Blocking questions from `reports/structure.json` (archetype, front, cutting fused parts, hinge) — answers go to `plan.yaml → decisions`.
 - Animation source request when a clip has no source.
 - Missing spec field that changes geometry, rig or budget.
 

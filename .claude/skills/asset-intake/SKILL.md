@@ -31,7 +31,8 @@ A pipeline technical director who receives assets from many sources (DCC exports
 2. **Import into a temporary scene** — never into the user's working scene; note the importer and options used.
 3. **Weld check** — glTF/FBX often split vertices on UV seams; weld a *copy* (`remove_doubles`, 1e-5 m) and report components and boundary edges before and after. Analysis uses welded numbers.
 4. **Measure** — run `production/scripts/blender/intake.py` (objects, triangles, quads ratio, components, boundary/non-manifold edges, dimensions, materials, texture sizes, UV layers, rig, actions).
-5. **Hints** — category, forward/up axis, pose (neutral vs action pose), generator (e.g. Tripo/Meshy naming); each with confidence.
+5. **Hints** — forward/up axis, pose (neutral vs action pose), generator (e.g. Tripo/Meshy naming); each with confidence. A category from file or object names is a weak hint only.
+5b. **Structure** — run `production/scripts/blender/structure_analysis.py` on the intake scene → `reports/structure.json`: parts, contacts, limbs/branches, wheels, archetype candidates and the questions to ask (`../blender-director/references/motion-analysis.md`).
 6. **Screenshots** — front, side, 3/4 in material preview; save to `reports/intake_*.png`.
 7. **Write** `reports/input-spec.yaml` + `reports/gate-G0.json`; save `checkpoints/01_intake.blend`.
 8. **Clean up** — remove the temporary scene and orphan data; restore viewport settings.
@@ -62,6 +63,7 @@ Details and heuristics: `references/intake-metrics.md`.
 - Import into the user's open scene or save over their .blend
 - Fix anything during intake (fixes belong to later stages)
 - Guess real-world size from bounding box alone
+- Decide how a model moves from its name or a category preset — the structure analysis decides, the user confirms what it cannot measure
 
 ## Reference Guide
 

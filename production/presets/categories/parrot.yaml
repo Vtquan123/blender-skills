@@ -1,4 +1,4 @@
-# Category preset — starting values; output-spec.yaml overrides any field.
+# Category preset — optional prior. structure_analysis.py measurements and the user's answers win; output-spec.yaml overrides any field.
 category: parrot
 family: creature
 template: {kind: custom, script: production/rigs/bird_metarig.py}   # Rigify ships no bird metarig

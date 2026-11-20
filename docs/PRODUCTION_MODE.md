@@ -32,7 +32,9 @@ Then ask the agent: *"Run Production Mode on ~/3d-production/projects/calico_cat
 
 ```
 ANALYZE   asset-intake          import + measure → reports/input-spec.yaml           G0
-PLAN      blender-director      strategy from facts × spec → plan.yaml              G1  ← you approve
+          structure analysis    parts, ground contacts, limbs/branches, wheels →
+                                how it can move + questions → reports/structure.json      ← you answer only what is unclear
+PLAN      blender-director      strategy from facts × answers × spec → plan.yaml    G1  ← you approve
 PRODUCE   deformation-prep      fit skeleton template, deform mesh with joint loops  G4a ← you approve joints
           texture-workflow      new UVs, bake colour/normal/ORM from the original    G2, G3
           deformation-prep      generate rig, skin weights, range-of-motion test     G4b, G4c ← you approve
@@ -41,18 +43,23 @@ EXPORT    web-export            master GLB → glTF-Transform → validator → 
 DELIVER   qa-review             reports/report.md, input checksums                   G8
 ```
 
-Strategy by category (`production/presets/categories/`):
+Strategy from the **geometry**, not from a category list (`production/scripts/blender/structure_analysis.py`; details in `.claude/skills/blender-director/references/motion-analysis.md`):
 
-| Family | Examples | Rig |
-|--------|----------|-----|
-| creature | human, dog, cat, parrot | Rigify template fitted to the mesh (bird template for parrots), deform mesh with loops at every joint |
-| articulated_object | book, box, folding chair | Rigid parts + hinge pivots (`hinge_rig.py`), no skinning |
-| static_object | table | No rig; clips animate the object (turntable, appear) |
+| Measured archetype | Examples | Rig | Clips |
+|--------------------|----------|-----|-------|
+| rigid_whole | ball, fruit, box, statue | Bones for roll/squash, or one root; no skinning | roll, bounce, turntable, hover |
+| rigid_parts | car, cart, chest, laptop, door | Rigid parts on bones or hinge pivots; fused wheels/lids cut out only if you agree | drive, turn, open, close |
+| chain_flex | tree, flower, snake, rope, tentacle | Bone chains along the measured branches/body + skin | wind sway, slither |
+| skinned | cat, dog, human, bird | Rigify template fitted to the mesh, deform mesh with joint loops, helper bones on short round limbs | walk, idle, imitated clips |
+| morph | slime, cushion | Shape keys | squash, wobble |
+
+Category presets (`production/presets/categories/`) are only starting values; when the measurement disagrees, you are shown both.
 
 ## 4. Your Decisions
 
 | When | You are asked |
 |------|---------------|
+| After analysis | Only what the measurement cannot settle: how it should move (when two archetypes score close), which end is the front, whether to cut fused parts (wheels, lid) so they can move, where a hinge is, which clips — each question shows the measurement and a recommended answer; answers are kept in `plan.yaml → decisions` |
 | G1 | Approve the plan (stages, budgets, clips) |
 | Joint placement / G4a | Approve the skeleton and the wireframe at each joint (`reports/img/G4a_*.png`) |
 | G4c | Approve the range-of-motion results (`reports/rom.json`, contact sheet) |
@@ -103,3 +110,4 @@ Example (test run, calico cat): 58 MB / 1.94 M triangles → 0.94 MB / 23.8 k tr
 - Thin strands (whiskers, hair wisps) do not survive the deform-mesh remesh; keep them as texture or separate rigid cards.
 - Template limits for stylised proportions (chibi, cartoon) need review: preset ROM limits are written for realistic anatomy.
 - KTX2 output, the parrot wing workflow and non-neutral poses have not yet been run end to end (see `ROADMAP.md`).
+- Structure analysis is tested on procedural assets (ball, car as parts and fused, tree, chest, snake) and the calico cat; real vehicles and plants from AI generators may need the questions more often. Fused wheels are cut along measured circles: the cut faces are filled flat and may need touching up.

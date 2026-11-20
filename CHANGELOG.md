@@ -6,6 +6,20 @@ Format: [Semantic Versioning](https://semver.org/) — `Major.Minor.Patch`
 
 ---
 
+## [1.5.0] — 2026-11-20
+
+### Added
+- **Any model, analysis first:** `production/scripts/blender/structure_analysis.py` measures parts, shape classes, ground contacts, a skeleton of protrusions, symmetry and wheels (separate or fused) without names or presets, scores motion archetypes (rigid_whole, rigid_parts, chain_flex, skinned, morph) and generates only the questions the measurement cannot settle (`blender-director/references/motion-analysis.md`)
+- **New motion types:** `rigid_rig.py` (ball: roll/squash/spin; vehicle: body, wheels, steering, optional cut of fused wheels), `chain_rig.py` (plants, snakes, ropes along the measured skeleton), generators `ball_roll`, `ball_bounce`, `vehicle_drive`, `wind_sway`
+- `skin_weights.py`: distance-weight fallback when bone heat fails
+- `production/tests/`: procedural test assets (ball, car as parts and fused, tree, chest, snake) with `run_structure_tests.py` and `run_rig_tests.py`
+
+### Changed
+- Category presets are priors: plans come from the structure analysis and the user's answers (`plan.yaml → decisions`); `output-spec.yaml asset.category` is optional
+- `runtime_check.mjs` (G7) checks rigid (bone-parented) meshes, matches samples by mesh name and fails clips that do not move
+
+---
+
 ## [1.4.0] — 2026-11-20
 
 ### Added

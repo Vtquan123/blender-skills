@@ -2,7 +2,9 @@
 # Strategy table: .claude/skills/blender-director/references/production-mode.md §3
 
 project: null
-strategy: null            # creature_deform | articulated_rigid | static_optimise
+strategy: null            # archetype from reports/structure.json: rigid_whole | rigid_parts | chain_flex | skinned | morph (+ /subtype)
+structure: reports/structure.json
+decisions: []             # [{id, answer, by: user|default|measured, at}] — answers to the analysis questions
 category: null
 stages:
   - {id: intake,    enabled: true,  skill: asset-intake,       gate: G0}

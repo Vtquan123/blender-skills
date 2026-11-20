@@ -53,7 +53,9 @@ Use when the input is an **existing asset** and the target is defined by `output
 
 ```
 ANALYZE    → asset-intake: input-spec.yaml (measured; unknown stays "unknown")      Gate G0
-PLAN       → production-mode.md strategy table → plan.yaml + brief                   Gate G1 (user approves)
+             → structure_analysis.py: parts, contacts, skeleton, wheels → archetypes + questions
+PLAN       → ask only the generated/blocking questions → motion-analysis.md archetype table
+             → production-mode.md strategy table → plan.yaml + brief                 Gate G1 (user approves)
 PREVIEW    → whole pipeline at low settings to show the direction early
 PRODUCTION → only the stages plan.yaml enables:
              geometry → surface → deformation-prep (rig) → animation                  Gates G2–G5
@@ -66,6 +68,7 @@ Rules:
 - Save `checkpoints/NN_<stage>.blend` and update `state.json` after every stage; resume from the last passed checkpoint.
 - Stop and ask when a required spec field is missing before an irreversible step.
 - A stage counts as done only after its gate passes on measured scene data, not when a script returns without error.
+- Decide how a model moves from the structure analysis, not from its name or a category preset (presets are priors); ask the user only where the analysis is not decisive or the choice changes the result (`references/motion-analysis.md`).
 
 Full protocol, strategy table and gate list: `references/production-mode.md`.
 
@@ -346,6 +349,7 @@ Bracketed stages run only when `plan.yaml` enables them.
 | Reference Analysis | `../references/reference-analysis-template.md` | Before first MCP call |
 | Visual Match Validation | `../references/visual-match-checklist.md` | Before delivery |
 | Production Mode | `references/production-mode.md` | Existing asset + output spec |
+| Motion Analysis | `references/motion-analysis.md` | Deciding how any model moves (creature, ball, vehicle, plant, prop) and what to ask |
 | Production Spec | `../references/production-spec.md` | Writing/reading input-spec, output-spec, plan |
 
 ## Decision Trees
