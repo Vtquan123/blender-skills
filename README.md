@@ -192,6 +192,7 @@ blender-director → asset-intake → deformation-prep → texture-workflow
 mesh_cleanup.py (weld, guarded decimate) → deformation-prep → rig_fit / skin_weights
 → generators.py → anim_curves.py (smooth, overlap, offset, loop) ⇄ motion_qa.py (reach, pops, jitter, floor, seam)
 → game_skeleton.py (audit → export rig: one root, no B-Bones/scale, baked clips) → export_glb / FBX
+review_notes.py publish/serve → local viewer (user pins notes) → context (exact vertices, bones, frame) → fix → reply
 ```
 
 ### Reference Image Match
@@ -220,7 +221,7 @@ Every skill in this pack:
 
 ```
 .claude-plugin/           # Claude Code plugin manifest
-.claude/skills/           # 97 skills + 192 reference files
+.claude/skills/           # 97 skills + 193 reference files
   ├── blender-director/
   ├── hard-surface/
   ├── prop-artist/
@@ -302,7 +303,7 @@ MIT License — See [LICENSE](LICENSE) for details.
 
 <div align="center">
 
-**Built for Cursor, Claude Code, Kiro & Codex** | **Blender MCP** | **97 Skills** | **192 Reference Files**
+**Built for Cursor, Claude Code, Kiro & Codex** | **Blender MCP** | **97 Skills** | **193 Reference Files**
 
 Inspired by [jeffallan/claude-skills](https://github.com/Jeffallan/claude-skills).
 Animation, rigging and cleanup methods informed by [elithril/blender-kiln](https://github.com/elithril/blender-kiln) (MIT),

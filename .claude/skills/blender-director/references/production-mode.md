@@ -26,7 +26,7 @@ Schemas: `../../references/production-spec.md`. Project scaffolding: `production
 |------|------|----------------|
 | ANALYZE | Intake → G0, then `structure_analysis.py` → `reports/structure.json` | Only the questions the analysis generates (archetype, front, fused parts, hinge, clips) — `motion-analysis.md` §3 |
 | PLAN | Strategy table → `plan.yaml` + production brief → G1 | **Always** (approve plan) |
-| PREVIEW | All enabled stages at preview settings (low remesh density, 512 px bakes, no LOD) | Shows screenshots and preview clips (`production/scripts/blender/preview_render.py`: separate scene with copies of the rig, ground, lights, follow camera, repeated clip with root motion; render in chunks, encode with ffmpeg); nothing is delivered |
+| PREVIEW | All enabled stages at preview settings (low remesh density, 512 px bakes, no LOD) | Shows screenshots and preview clips (`production/scripts/blender/preview_render.py`: separate scene with copies of the rig, ground, lights, follow camera, repeated clip with root motion; render in chunks, encode with ffmpeg) and the review viewer (`review_notes.py` publish/serve: the user pins notes on the model, `context` turns them into vertices, bones and frames — `../../qa-review/references/review-notes.md`); nothing is delivered |
 | PRODUCTION | Enabled stages from `geometry` to `animation` | At gates the spec lists in `acceptance.approve_at` |
 | VALIDATE | Re-runs gates on the latest checkpoint | Only if a gate fails |
 | EXPORT | Export → web/engine optimisation → G6–G8 → report | Final review |

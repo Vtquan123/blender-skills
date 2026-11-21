@@ -230,8 +230,67 @@ def test_mesh_cleanup():
             "warnings": r["warnings"] + g["warnings"]}
 
 
+def test_review_notes():
+    """publish → server → a note posted like the viewer does → context finds the exact vertex and frame."""
+    import json
+    import shutil
+    import tempfile
+    import urllib.request
+    ns = _script("review_notes")
+    rig, tube = leg_rig(PREFIX + "rv")
+    act = bpy.data.actions.new(PREFIX + "rv_swing")
+    rig.animation_data_create().action = act
+    th = rig.pose.bones["DEF-thigh.L"]
+    th.rotation_mode = "XYZ"
+    for f, a in ((1, 0.0), (12, 0.9), (24, 0.0)):
+        th.rotation_euler = (a, 0, 0)
+        th.keyframe_insert("rotation_euler", frame=f)
+    proj = tempfile.mkdtemp(prefix="u3d_review_test_")
+    port = 8799
+    r = {}
+    try:
+        pub = ns["run"]({"mode": "publish", "project_dir": proj, "objects": [rig.name, tube.name], "clips": [act.name]})
+        man = json.load(open(os.path.join(proj, "review", "manifest.json")))
+        clip = next(iter(man["clips"]))
+        srv = ns["run"]({"mode": "serve", "project_dir": proj, "port": port})
+        base = srv["url"]
+        # the note the viewer would write for vertex 50 at Blender frame 12
+        vi, frame = 50, 12
+        rest = tube.matrix_world @ tube.data.vertices[vi].co
+        bpy.context.scene.frame_set(frame)
+        posed = _script("u3d_common")["evaluated_vertex_positions"](tube)[vi]
+        bpy.context.scene.frame_set(1)
+        t = (frame - man["clips"][clip]["frame_start"]) / man["fps"]
+        note = {"object": tube.name, "clip": clip, "time_s": t, "rest_point": list(rest), "posed_point": [float(x) for x in posed],
+                "text": "test note", "category": "weights", "status": "open", "scope": "point", "model": "review/current.glb"}
+        req = urllib.request.Request(base + "api/note", data=json.dumps(note).encode(), method="POST",
+                                     headers={"Content-Type": "application/json"})
+        nid = json.loads(urllib.request.urlopen(req).read())["id"]
+        ctx = ns["run"]({"mode": "context", "project_dir": proj})["notes"][0]
+        rep = ns["run"]({"mode": "reply", "project_dir": proj, "id": nid, "text": "fixed", "measures": {"x": 1}})
+        state = json.loads(urllib.request.urlopen(base + "api/state").read())
+        html = urllib.request.urlopen(base).read().decode()
+        bad = urllib.request.Request(base + "api/state", headers={"Host": "evil.example"})
+        try:
+            urllib.request.urlopen(bad)
+            host_blocked = False
+        except urllib.error.HTTPError as e:
+            host_blocked = e.code == 403
+        r = {"publish_ok": pub.get("ok"), "clip": clip, "frame": ctx.get("frame"), "nearest": ctx.get("nearest_vertex"),
+             "posed_check_mm": ctx.get("posed_check_mm"), "warnings": ctx.get("warnings"),
+             "reply_status": rep["note"]["status"], "models": [m["path"] for m in state["models"]],
+             "importmap_filled": "__THREE_BASE__" not in html, "host_blocked": host_blocked}
+        ok = (pub.get("ok") and ctx["nearest_vertex"]["index"] == vi and ctx["nearest_vertex"]["dist_mm"] < 0.01
+              and abs(ctx["frame"] - frame) < 1e-3 and ctx["posed_check_mm"] < 0.5 and rep["note"]["status"] == "resolved"
+              and "review/current.glb" in r["models"] and r["importmap_filled"] and host_blocked)
+    finally:
+        ns["run"]({"mode": "stop", "project_dir": proj, "port": port})
+        shutil.rmtree(proj, ignore_errors=True)
+    return {"pass": bool(ok), **r}
+
+
 TESTS = {"anim_curves": test_anim_curves, "motion_qa": test_motion_qa, "game_skeleton": test_game_skeleton,
-         "mesh_cleanup": test_mesh_cleanup}
+         "mesh_cleanup": test_mesh_cleanup, "review_notes": test_review_notes}
 
 
 def _cleanup(sc):
@@ -242,7 +301,7 @@ def _cleanup(sc):
         coll = getattr(bpy.data, kind)          # a new wrapper on every access: compare by name, not identity
         for nm in [d.name for d in coll if d.name.startswith(PREFIX)]:
             d = coll.get(nm)
-            if d is not None and (kind in ("objects", "actions", "collections") or d.users == 0):
+            if d is not None and (kind in ("objects", "actions", "collections", "meshes") or d.users == 0):
                 coll.remove(d)
 
 

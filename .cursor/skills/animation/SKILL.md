@@ -138,3 +138,4 @@ Through the MCP the same moves are script calls: `production/scripts/blender/ani
 | Web runtime limits | `../web-export/references/web-runtime-limits.md` | Clips for browsers |
 | Curve polish through the MCP (AnimAide-style ops) | `references/curve-polish.md` | Fixing pops, overlap, offsets, loops |
 | Motion quality measures and fixes | `references/motion-quality.md` | Every clip before review (G5) |
+| User feedback pinned on a frame | `../qa-review/references/review-notes.md` | The user reviews clips in the viewer |

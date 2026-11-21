@@ -153,3 +153,4 @@ Minimum game facial: jaw open, blink L/R, brow up/down.
 | Category templates | `../deformation-prep/references/category-rigs.md` | Human, dog, cat, parrot, book, box, chair, table |
 | ROM test | `../deformation-prep/references/rom-test.md` | Before animation |
 | Game-ready skeleton (single hierarchy, root, baked clips) | `references/game-ready-skeleton.md` | Unity / Unreal / Godot / glTF export of a Rigify or custom rig |
+| Weight problems pinned by the user (weights view, notes → vertex indices) | `../qa-review/references/review-notes.md` | Skin feedback on a spot |

@@ -30,20 +30,29 @@ Rigging, animation and meshing efficiency. Methods studied in elithril/blender-k
   transforms, guarded decimate, origin at base), before/after counts incl. duplicate vertices and components,
   decimate undone and relaxed (up to 2× target) when it opens the mesh, `protect_group`, print mode, tier budgets,
   T/A/I pose measure (`blender-modeler/references/mesh-cleanup.md`)
-- `production/tests/run_v16_tests.py` — procedural regression tests for the four scripts (throw-away scene)
+- **Review notes** — `production/review/viewer.html` + `production/scripts/review/serve.py` (stdlib, 127.0.0.1 only,
+  non-localhost Host refused) + `review_notes.py` (`publish` with current/previous GLB and a frame manifest, `serve`,
+  `stop`, `context`, `reply`, `view`). The user clicks the model to inspect a point (Blender rest/posed coordinates,
+  object, interpolated skin weights, Blender frame) and pins notes; `context` turns each into vertex indices, region
+  weights, nearest deform bones and a posed check; replies show under the note. Views: lit/clay/normals/weights per
+  bone, wire, skeleton, floor, A/B side by side, motion_qa frames on the timeline. A reduced take on blender-kiln's
+  Studio: no phone/AR sharing, no agent launched from the page (`qa-review/references/review-notes.md`)
+- `production/tests/run_v16_tests.py` — procedural regression tests for the five scripts (throw-away scene)
 
 ### Measured
 - Project cat, existing `AN_walk` (Rigify, 11.9 k vertices): `motion_qa` found hind legs at 98.6 % reach, 8 knee
   pops and 10.3° jitter (invisible on stills); `anim_curves smooth` → 96 %, 0 pops, 5.7°
 - Same rig: glTF skin exported from the control rig had 16 root joints; from `game_skeleton` export rig 1 root,
   49 joints, parity 0.000 mm bone heads / 0.006 mm skin over both baked clips
+- Review notes on the project cat: a click at walk frame 22 resolved to a vertex 1.3 mm away with a 1.3 mm posed
+  check; the same click showed `DEF-ear.R` weighting 19 % of the neck
 - Project dog (Tripo, 1.92 M triangles, 128 pieces, 20,758 doubled vertices): `mesh_cleanup` → 20 K triangles,
   1 piece, open edges 41,081 → 2, 65 s
 
 ### Changed
 - `animation`, `rigging` (1.2.0), `blender-modeler` (1.1.0), `export-pipeline`, `deformation-prep`: new references
   and MCP steps; Production Mode G2/G5/G6 rows list the new checks
-- References **188 → 192**
+- References **188 → 193**
 
 ### Fixed (found while building the tests)
 - Blender 5 creates F-curves only for an assigned action slot: `anim_curves` assigns temporarily and restores

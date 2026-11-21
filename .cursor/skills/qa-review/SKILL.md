@@ -4,7 +4,7 @@ description: Production QA gate for Blender assets using viewport screenshots, v
 license: MIT
 metadata:
   author: https://github.com/arjun988
-  version: "1.1.0"
+  version: "1.2.0"
   domain: blender
   role: specialist
   triggers: QA, quality assurance, review, validation, checklist, screenshot review, ship check, art review, quality gate, gate report
@@ -43,6 +43,8 @@ Gather brief budgets → Screenshot key angles → Run checklists
 5. Vs reference (if reference task)
 
 Use the MCP viewport screenshot (`get_screenshot_of_area_as_image`, `VIEW_3D`) when connected; frame first with `jump_to_view3d_object_by_name`.
+
+When the user reviews, prefer the review viewer over screenshots: `review_notes.py` publishes the model to a local three.js page where the user clicks and pins notes; each note comes back as Blender data (object, rest/posed point, vertex indices, skin weights, Blender frame, camera) — `references/review-notes.md`.
 
 ## Checklists (load as needed)
 
@@ -92,3 +94,4 @@ Use the MCP viewport screenshot (`get_screenshot_of_area_as_image`, `VIEW_3D`) w
 | Qa Verdict Template | `references/qa-verdict-template.md` | When needed |
 | Screenshot Angles | `references/screenshot-angles.md` | When needed |
 | Production Gates | `references/production-gates.md` | Production Mode stages |
+| Review notes (local viewer, pinned notes → exact vertices, bones, frame) | `references/review-notes.md` | The user reviews a model or clip; feedback on a spot |

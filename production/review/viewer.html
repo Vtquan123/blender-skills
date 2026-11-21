@@ -1,0 +1,473 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Review</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root { --bg:#16181c; --panel:#1f2228; --line:#2e323a; --text:#e6e8eb; --dim:#9aa1ab; --accent:#f0a030; --ok:#4cc38a; --bad:#e5534b; }
+  * { box-sizing: border-box; }
+  html, body { margin:0; height:100%; background:var(--bg); color:var(--text); font:13px/1.4 system-ui, -apple-system, Segoe UI, sans-serif; }
+  #app { display:grid; grid-template-columns: 1fr 340px; grid-template-rows: 1fr auto; height:100vh; }
+  #view { position:relative; overflow:hidden; }
+  canvas#c { width:100%; height:100%; display:block; }
+  #side { grid-row: 1 / span 2; grid-column: 2; background:var(--panel); border-left:1px solid var(--line); overflow:auto; padding:10px 12px; }
+  #tl { grid-column:1; background:var(--panel); border-top:1px solid var(--line); padding:6px 10px; display:flex; gap:8px; align-items:center; }
+  #tl input[type=range] { flex:1; }
+  #marks { position:absolute; left:0; right:0; height:6px; top:-7px; pointer-events:none; }
+  .slider { position:relative; flex:1; display:flex; }
+  h3 { margin:12px 0 6px; font-size:11px; letter-spacing:.06em; text-transform:uppercase; color:var(--dim); }
+  select, button, textarea, input { background:#2a2e36; color:var(--text); border:1px solid var(--line); border-radius:6px; font:inherit; }
+  select, button { padding:4px 8px; }
+  button { cursor:pointer; } button:hover { border-color:#4a505b; }
+  button.primary { background:var(--accent); color:#1a1a1a; border-color:var(--accent); font-weight:600; }
+  .row { display:flex; gap:6px; align-items:center; flex-wrap:wrap; margin:4px 0; }
+  .row label { display:flex; gap:4px; align-items:center; }
+  #insp { background:#262a31; border:1px solid var(--line); border-radius:8px; padding:8px; font-family: ui-monospace, Menlo, monospace; font-size:11.5px; white-space:pre-wrap; min-height:40px; }
+  .note { border:1px solid var(--line); border-radius:8px; padding:7px 8px; margin:6px 0; background:#252930; }
+  .note.sel { border-color:var(--accent); }
+  .note.resolved { opacity:.6; }
+  .note .meta { color:var(--dim); font-size:11.5px; }
+  .badge { display:inline-block; padding:0 6px; border-radius:9px; font-size:11px; background:#3a3f48; }
+  .badge.open { background:var(--accent); color:#1a1a1a; } .badge.resolved { background:var(--ok); color:#10301f; } .badge.wontfix { background:#555; }
+  .reply { border-left:2px solid var(--ok); padding-left:7px; margin-top:5px; }
+  #hud { position:absolute; left:10px; bottom:8px; color:var(--dim); font:11.5px ui-monospace, Menlo, monospace; pointer-events:none; text-shadow:0 1px 2px #000; }
+  #err { position:absolute; left:10px; top:10px; color:var(--bad); }
+  .tag { position:absolute; top:8px; padding:2px 8px; border-radius:6px; background:#000a; color:var(--dim); font-size:11px; pointer-events:none; }
+  #form textarea { width:100%; min-height:70px; margin:6px 0; padding:6px; }
+  .pinlabel { position:absolute; transform:translate(-50%,-140%); background:var(--accent); color:#111; border-radius:9px; padding:0 5px; font-size:11px; font-weight:700; pointer-events:none; }
+  .pinlabel.resolved { background:var(--ok); }
+</style>
+<script type="importmap">{"imports":{"three":"__THREE_BASE__/build/three.module.js","three/addons/":"__THREE_BASE__/examples/jsm/"}}</script>
+</head>
+<body>
+<div id="app">
+  <div id="view">
+    <canvas id="c"></canvas>
+    <div id="labels"></div>
+    <div class="tag" id="tagA" style="left:8px">A</div>
+    <div class="tag" id="tagB" style="left:50%; display:none">B</div>
+    <div id="hud"></div><div id="err"></div>
+  </div>
+  <aside id="side">
+    <div class="row"><b id="proj">Review</b></div>
+    <h3>Model</h3>
+    <div class="row"><select id="modelA" style="flex:1"></select></div>
+    <div class="row">compare <select id="modelB" style="flex:1"><option value="">— none —</option></select></div>
+    <h3>View</h3>
+    <div class="row">
+      <label><input type="radio" name="mode" value="lit" checked>lit</label>
+      <label><input type="radio" name="mode" value="clay">clay</label>
+      <label><input type="radio" name="mode" value="normals">normals</label>
+      <label><input type="radio" name="mode" value="weights">weights</label>
+    </div>
+    <div class="row">bone <select id="bone" style="flex:1"></select></div>
+    <div class="row">
+      <label><input type="checkbox" id="wire">wire</label>
+      <label><input type="checkbox" id="bones">bones</label>
+      <label title="at the model's lowest rest point"><input type="checkbox" id="grid" checked>floor</label>
+      <label><input type="checkbox" id="pins" checked>pins</label>
+      <label><input type="checkbox" id="hover" checked>hover</label>
+    </div>
+    <h3>Point (click the model)</h3>
+    <div id="insp">Click a point: Blender coordinates, object, bone weights and frame appear here.</div>
+    <div class="row"><button class="primary" id="addNote" disabled>📍 Pin a note here</button><button id="addGeneral">Note on the whole model</button></div>
+    <div id="form" hidden>
+      <div class="row">
+        <select id="cat">
+          <option value="shape">shape</option><option value="topology">topology</option><option value="weights">weights / skin</option>
+          <option value="rig">rig</option><option value="animation">animation</option><option value="material">material / UV</option><option value="other">other</option>
+        </select>
+      </div>
+      <textarea id="text" placeholder="What is wrong here, and what should it be?"></textarea>
+      <div class="row"><button class="primary" id="save">Save note</button><button id="cancel">Cancel</button></div>
+    </div>
+    <h3>Notes <span id="count" class="badge">0</span></h3>
+    <div class="row"><label><input type="checkbox" id="showResolved">show resolved</label></div>
+    <div id="notes"></div>
+  </aside>
+  <footer id="tl">
+    <select id="clip"><option value="">rest pose</option></select>
+    <button id="play">▶</button>
+    <div class="slider"><canvas id="marks"></canvas><input type="range" id="time" min="0" max="1" step="0.0001" value="0" style="width:100%"></div>
+    <span id="frame" style="min-width:150px; font-family:ui-monospace,Menlo,monospace">—</span>
+  </footer>
+</div>
+<script type="module">
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+const $ = (id) => document.getElementById(id);
+const r5 = (x) => Math.round(x * 1e5) / 1e5;
+const toBl = (v) => [r5(v.x), r5(-v.z), r5(v.y)];             // glTF Y-up → Blender Z-up
+const fromBl = (a) => new THREE.Vector3(a[0], a[2], -a[1]);
+
+let S = { manifest: {}, models: [], notes: [], marks: {} };
+const canvas = $('c');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+renderer.setPixelRatio(window.devicePixelRatio);
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+const camera = new THREE.PerspectiveCamera(35, 1, 0.001, 1000);
+const controls = new OrbitControls(camera, canvas);
+controls.enableDamping = true;
+const clock = new THREE.Clock();
+const raycaster = new THREE.Raycaster();
+const clay = new THREE.MeshStandardMaterial({ color: 0xbdbdbd, roughness: 0.85 });
+const normalsMat = new THREE.MeshNormalMaterial();
+
+function makeScene() {
+  const sc = new THREE.Scene();
+  sc.background = new THREE.Color(0x16181c);
+  sc.add(new THREE.HemisphereLight(0xffffff, 0x404048, 1.6));
+  const d = new THREE.DirectionalLight(0xffffff, 2.2); d.position.set(2, 4, 3); sc.add(d);
+  const grid = new THREE.GridHelper(10, 100, 0x55606a, 0x2c3138); grid.name = '__grid'; sc.add(grid);
+  const pins = new THREE.Group(); pins.name = '__pins'; sc.add(pins);
+  return sc;
+}
+const A = { scene: makeScene(), m: null }, B = { scene: makeScene(), m: null };
+let playing = false, curClip = '', curTime = 0, pick = null, selNote = null, editing = false, framed = false;
+
+// ---------------------------------------------------------------- loading
+const loader = new GLTFLoader();
+function origName(parser, obj) {
+  for (let o = obj; o; o = o.parent) {
+    const a = parser.associations.get(o);
+    if (a && a.nodes !== undefined) return parser.json.nodes[a.nodes].name || o.name;
+  }
+  return obj.userData?.name || obj.name;
+}
+async function load(slot, path) {
+  if (slot.m) { slot.scene.remove(slot.m.root); slot.scene.remove(slot.m.helper); slot.m = null; }
+  if (!path) return;
+  const gltf = await loader.loadAsync('/project/' + path + '?t=' + Date.now());
+  const root = gltf.scene, parser = gltf.parser;
+  const meshes = [], boneSet = new Map();
+  root.traverse((o) => {
+    if (o.isMesh) {
+      o.userData.orig = Array.isArray(o.material) ? o.material.slice() : o.material;
+      o.userData.blName = origName(parser, o);
+      meshes.push(o);
+      if (o.isSkinnedMesh) o.skeleton.bones.forEach((b) => boneSet.set(b, origName(parser, b)));
+    }
+  });
+  const helper = new THREE.SkeletonHelper(root); helper.visible = $('bones').checked; helper.name = '__bones';
+  slot.scene.add(root); slot.scene.add(helper);
+  const mixer = new THREE.AnimationMixer(root);
+  slot.m = { path, root, parser, meshes, boneNames: boneSet, mixer, clips: gltf.animations, helper, action: null };
+  applyMode(slot); setClip(slot, curClip);
+  if (slot === A && !framed) { frame(root); framed = true; }
+}
+function frame(root) {
+  const box = new THREE.Box3().setFromObject(root), size = box.getSize(new THREE.Vector3()), c = box.getCenter(new THREE.Vector3());
+  const r = Math.max(size.x, size.y, size.z) || 1;
+  controls.target.copy(c); camera.position.copy(c).add(new THREE.Vector3(0.9, 0.55, 1.4).multiplyScalar(r * 1.4));
+  camera.near = r / 500; camera.far = r * 200; camera.updateProjectionMatrix(); controls.update();
+  for (const s of [A, B]) { const g = s.scene.getObjectByName('__grid'); g.scale.setScalar(Math.max(r, 0.2) / 2); g.position.y = box.min.y; }
+}
+
+// ---------------------------------------------------------------- view modes
+function ramp(w) {   // blue → green → red
+  const c = new THREE.Color();
+  if (w < 0.5) c.setRGB(0.1, 0.15 + 1.3 * w, 0.45 - 0.7 * w); else c.setRGB(0.1 + 1.8 * (w - 0.5), 0.8 - 1.2 * (w - 0.5), 0.1);
+  return c;
+}
+function weightsMaterial(slot, mesh, boneName) {
+  const g = mesh.geometry, n = g.attributes.position.count, col = new Float32Array(n * 3);
+  let bi = -1;
+  if (mesh.isSkinnedMesh) bi = mesh.skeleton.bones.findIndex((b) => slot.m.boneNames.get(b) === boneName);
+  const si = g.attributes.skinIndex, sw = g.attributes.skinWeight;
+  let rigid = 0;
+  if (!mesh.isSkinnedMesh) { for (let o = mesh; o; o = o.parent) if (origName(slot.m.parser, o) === boneName) rigid = 1; }
+  for (let i = 0; i < n; i++) {
+    let w = rigid;
+    if (bi >= 0 && si) for (let k = 0; k < 4; k++) if (si.getComponent(i, k) === bi) w += sw.getComponent(i, k);
+    const c = ramp(Math.min(1, w)); col.set([c.r, c.g, c.b], i * 3);
+  }
+  g.setAttribute('color', new THREE.BufferAttribute(col, 3));
+  return new THREE.MeshBasicMaterial({ vertexColors: true });
+}
+function applyMode(slot) {
+  if (!slot.m) return;
+  const mode = document.querySelector('input[name=mode]:checked').value, bone = $('bone').value, wire = $('wire').checked;
+  for (const mesh of slot.m.meshes) {
+    let mat = mode === 'lit' ? mesh.userData.orig : mode === 'clay' ? clay : mode === 'normals' ? normalsMat : weightsMaterial(slot, mesh, bone);
+    const mats = Array.isArray(mat) ? mat : [mat];
+    mats.forEach((m) => { m.wireframe = wire; });
+    mesh.material = mat;
+  }
+  slot.m.helper.visible = $('bones').checked;
+  slot.scene.getObjectByName('__grid').visible = $('grid').checked;
+  slot.scene.getObjectByName('__pins').visible = $('pins').checked;
+}
+function refreshBones() {
+  const sel = $('bone'), prev = sel.value, names = new Set();
+  for (const s of [A, B]) if (s.m) s.m.boneNames.forEach((v) => names.add(v));
+  sel.innerHTML = [...names].sort().map((n) => `<option>${n}</option>`).join('');
+  if ([...names].includes(prev)) sel.value = prev;
+}
+
+// ---------------------------------------------------------------- clips and time
+const fps = () => S.manifest.fps || 24;
+const clipInfo = (name) => (S.manifest.clips || {})[name] || {};
+function setClip(slot, name) {
+  if (!slot.m) return;
+  slot.m.mixer.stopAllAction();
+  slot.m.action = null;
+  const clip = slot.m.clips.find((c) => c.name === name);
+  if (clip) { const a = slot.m.mixer.clipAction(clip); a.play(); a.paused = true; slot.m.action = a; }
+  else restPose(slot);
+}
+function restPose(slot) { slot.m.meshes.forEach((m) => m.isSkinnedMesh && m.skeleton.pose()); }
+function duration() { const a = A.m?.action; return a ? a.getClip().duration : 0; }
+function setTime(t) {
+  curTime = t;
+  for (const s of [A, B]) if (s.m?.action) { s.m.action.time = Math.min(t, s.m.action.getClip().duration); s.m.mixer.update(0); }
+  const d = duration();
+  $('time').value = d ? t / d : 0;
+  if (curClip) {
+    const f = t * fps(), fs = clipInfo(curClip).frame_start;
+    $('frame').textContent = `t ${t.toFixed(3)} s · frame ${fs !== undefined ? Math.round(fs + f) + ' (Blender)' : Math.round(f)}`;
+  } else $('frame').textContent = 'rest pose';
+}
+function drawMarks() {
+  const c = $('marks'), w = c.clientWidth, ctx = c.getContext('2d');
+  c.width = w; c.height = 6; ctx.clearRect(0, 0, w, 6);
+  const d = duration(); if (!d || !curClip) return;
+  const info = clipInfo(curClip);
+  const m = Object.entries(S.marks).find(([k, v]) => k === curClip || v.action === info.action || k === info.action);
+  ctx.fillStyle = '#e5534b';
+  if (m) for (const f of m[1].frames) { const t = (f - (info.frame_start ?? 0)) / fps(); ctx.fillRect(Math.round((t / d) * w) - 1, 0, 3, 6); }
+  ctx.fillStyle = '#f0a030';
+  for (const n of S.notes) if (n.clip === curClip && n.status !== 'resolved' && n.time_s !== undefined) ctx.fillRect(Math.round((n.time_s / d) * w) - 1, 0, 3, 6);
+}
+
+// ---------------------------------------------------------------- picking
+function ndc(ev) {
+  const r = canvas.getBoundingClientRect(), compare = !!B.m, w = compare ? r.width / 2 : r.width;
+  const x = ev.clientX - r.left, y = ev.clientY - r.top;
+  if (compare && x > w) return null;
+  return new THREE.Vector2((x / w) * 2 - 1, -(y / r.height) * 2 + 1);
+}
+function cast(ev) {
+  if (!A.m) return null;
+  const p = ndc(ev); if (!p) return null;
+  camera.aspect = aspect(); camera.updateProjectionMatrix();
+  raycaster.setFromCamera(p, camera);
+  A.m.meshes.forEach((m) => { if (m.isSkinnedMesh) m.computeBoundingSphere(); });
+  return raycaster.intersectObjects(A.m.meshes, false)[0] || null;
+}
+function pickData(hit) {
+  const mesh = hit.object, g = mesh.geometry, f = hit.face, idx = [f.a, f.b, f.c];
+  let bary = hit.barycoord;
+  if (!bary) {
+    const P = idx.map((i) => mesh.getVertexPosition(i, new THREE.Vector3()).applyMatrix4(mesh.matrixWorld));
+    bary = THREE.Triangle.getBarycoord(hit.point, P[0], P[1], P[2], new THREE.Vector3());
+  }
+  const rest = new THREE.Vector3(), v = new THREE.Vector3();
+  idx.forEach((i, k) => rest.addScaledVector(v.fromBufferAttribute(g.attributes.position, i), bary.getComponent(k)));
+  rest.applyMatrix4(mesh.matrixWorld);
+  const weights = {};
+  if (mesh.isSkinnedMesh && g.attributes.skinIndex) {
+    idx.forEach((i, k) => { for (let j = 0; j < 4; j++) {
+      const w = g.attributes.skinWeight.getComponent(i, j) * bary.getComponent(k); if (w < 1e-4) continue;
+      const name = A.m.boneNames.get(mesh.skeleton.bones[g.attributes.skinIndex.getComponent(i, j)]);
+      weights[name] = (weights[name] || 0) + w; } });
+  }
+  const parentBone = (() => { for (let o = mesh.parent; o; o = o.parent) if (o.isBone) return A.m.boneNames.get(o) || origName(A.m.parser, o); return null; })();
+  const n = hit.face.normal.clone().transformDirection(mesh.matrixWorld);
+  const info = curClip ? clipInfo(curClip) : {};
+  return {
+    model: A.m.path, object: mesh.userData.blName, skinned: !!mesh.isSkinnedMesh,
+    clip: curClip || null, action: info.action || null, time_s: curClip ? r5(curTime) : null,
+    frame: curClip ? (info.frame_start !== undefined ? Math.round(info.frame_start + curTime * fps()) : Math.round(curTime * fps())) : null,
+    posed_point: toBl(hit.point), rest_point: toBl(rest), normal: toBl(n),
+    weights: Object.entries(weights).sort((a, b) => b[1] - a[1]).slice(0, 4).map(([k, w]) => [k, r5(w)]),
+    parent_bone: parentBone, gltf_triangle: idx,
+    camera: { position: toBl(camera.position), target: toBl(controls.target), fov_deg: camera.fov },
+    view_mode: document.querySelector('input[name=mode]:checked').value,
+  };
+}
+function showPick(d) {
+  if (!d) { $('insp').textContent = 'No surface under the cursor.'; $('addNote').disabled = true; return; }
+  const w = d.weights.length ? d.weights.map(([k, v]) => `${k} ${(v * 100).toFixed(0)}%`).join(', ') : (d.parent_bone ? `rigid → ${d.parent_bone}` : '—');
+  $('insp').textContent = `object  ${d.object}\nposed   ${d.posed_point.join(', ')}\nrest    ${d.rest_point.join(', ')}\nweights ${w}\n` +
+    (d.clip ? `clip    ${d.clip} · frame ${d.frame}` : 'rest pose');
+  $('addNote').disabled = false;
+}
+let down = null;
+canvas.addEventListener('pointerdown', (e) => { down = [e.clientX, e.clientY]; });
+canvas.addEventListener('pointerup', (e) => {
+  if (!down || Math.hypot(e.clientX - down[0], e.clientY - down[1]) > 4 || e.button !== 0) return;
+  const pinHit = hitPin(e); if (pinHit) { selectNote(pinHit); return; }
+  const h = cast(e); pick = h ? pickData(h) : null; showPick(pick); placeCursor(pick);
+});
+let hoverT = 0;
+canvas.addEventListener('pointermove', (e) => {
+  if (!$('hover').checked || playing || down && e.buttons) return;
+  const now = performance.now(); if (now - hoverT < 80) return; hoverT = now;
+  const h = cast(e);
+  $('hud').textContent = h ? `${h.object.userData.blName}  ${toBl(h.point).join(', ')}` : '';
+});
+const cursor = new THREE.Mesh(new THREE.SphereGeometry(1, 16, 12), new THREE.MeshBasicMaterial({ color: 0x00d0ff, depthTest: false }));
+cursor.renderOrder = 10; cursor.visible = false; A.scene.add(cursor);
+function pinSize() { if (!A.m) return 0.01; const s = new THREE.Box3().setFromObject(A.m.root).getSize(new THREE.Vector3()); return Math.max(s.x, s.y, s.z) * 0.008; }
+function placeCursor(d) { cursor.visible = !!d; if (d) { cursor.position.copy(fromBl(d.posed_point)); cursor.scale.setScalar(pinSize() * 0.8); } }
+
+// ---------------------------------------------------------------- notes
+function openForm(general) {
+  editing = true; $('form').hidden = false; $('text').value = ''; $('text').focus();
+  $('form').dataset.general = general ? '1' : '';
+  if (general) $('cat').value = 'other';
+}
+$('addNote').onclick = () => openForm(false);
+$('addGeneral').onclick = () => openForm(true);
+$('cancel').onclick = () => { editing = false; $('form').hidden = true; };
+$('save').onclick = async () => {
+  const text = $('text').value.trim(); if (!text) return;
+  const general = !!$('form').dataset.general;
+  const base = general || !pick ? { model: A.m?.path, clip: curClip || null, time_s: curClip ? r5(curTime) : null,
+    frame: curClip ? Math.round((clipInfo(curClip).frame_start ?? 0) + curTime * fps()) : null, action: clipInfo(curClip).action || null,
+    camera: { position: toBl(camera.position), target: toBl(controls.target), fov_deg: camera.fov } } : pick;
+  const note = { ...base, scope: general ? 'model' : 'point', category: $('cat').value, text, status: 'open', author: 'user', replies: [] };
+  const res = await fetch('/api/note', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(note) });
+  if (!res.ok) { $('err').textContent = 'Saving failed: ' + (await res.text()); return; }
+  editing = false; $('form').hidden = true; await refreshNotes(); selectNote((await res.json()).id);
+};
+async function setStatus(id, status) {
+  await fetch('/api/note', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, status }) });
+  refreshNotes();
+}
+function esc(s) { return String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
+function renderNotes() {
+  const list = S.notes.filter((n) => $('showResolved').checked || n.status === 'open');
+  $('count').textContent = S.notes.filter((n) => n.status === 'open').length;
+  $('notes').innerHTML = list.map((n) => {
+    const i = S.notes.indexOf(n) + 1;
+    const where = [n.object, n.clip ? `${n.clip} @ ${n.frame}` : null].filter(Boolean).join(' · ');
+    const replies = (n.replies || []).map((r) => `<div class="reply"><b>${esc(r.by || 'claude')}</b> ${esc(r.text)}</div>`).join('');
+    return `<div class="note ${n.status} ${selNote === n.id ? 'sel' : ''}" data-id="${n.id}">
+      <div><span class="badge ${n.status}">#${i} ${n.status}</span> <span class="badge">${esc(n.category)}</span></div>
+      <div style="margin:4px 0">${esc(n.text)}</div><div class="meta">${esc(where)}</div>${replies}
+      <div class="row"><button data-go="${n.id}">Go</button>
+      ${n.status === 'open' ? `<button data-st="resolved" data-id2="${n.id}">Resolve</button>` : `<button data-st="open" data-id2="${n.id}">Reopen</button>`}</div></div>`;
+  }).join('') || '<div class="meta">No notes yet.</div>';
+  $('notes').querySelectorAll('[data-go]').forEach((b) => (b.onclick = () => goTo(b.dataset.go)));
+  $('notes').querySelectorAll('[data-st]').forEach((b) => (b.onclick = () => setStatus(b.dataset.id2, b.dataset.st)));
+  renderPins(); drawMarks();
+}
+function renderPins() {
+  const g = A.scene.getObjectByName('__pins'); g.clear(); $('labels').innerHTML = '';
+  if (!A.m) return;
+  const s = pinSize();
+  S.notes.forEach((n, i) => {
+    if (n.model !== A.m.path || !n.posed_point || (!$('showResolved').checked && n.status !== 'open')) return;
+    const m = new THREE.Mesh(new THREE.SphereGeometry(s, 16, 12), new THREE.MeshBasicMaterial({ color: n.status === 'open' ? 0xf0a030 : 0x4cc38a, depthTest: false }));
+    m.renderOrder = 9; m.position.copy(fromBl(n.posed_point)); m.userData.id = n.id; m.userData.num = i + 1; g.add(m);
+    const l = document.createElement('div'); l.className = 'pinlabel ' + n.status; l.textContent = i + 1; l.dataset.id = n.id; $('labels').appendChild(l);
+  });
+}
+function hitPin(ev) {
+  const p = ndc(ev); if (!p) return null;
+  raycaster.setFromCamera(p, camera);
+  const h = raycaster.intersectObjects(A.scene.getObjectByName('__pins').children, false)[0];
+  return h ? h.object.userData.id : null;
+}
+function selectNote(id) { selNote = id; renderNotes(); document.querySelector(`.note[data-id="${id}"]`)?.scrollIntoView({ block: 'nearest' }); }
+async function goTo(id) {
+  const n = S.notes.find((x) => x.id === id); if (!n) return;
+  if (n.model && n.model !== A.m?.path) { $('modelA').value = n.model; await load(A, n.model); refreshBones(); }
+  $('clip').value = n.clip || ''; curClip = n.clip || ''; [A, B].forEach((s) => setClip(s, curClip)); setTime(n.time_s || 0); drawMarks();
+  if (n.camera) { camera.position.copy(fromBl(n.camera.position)); controls.target.copy(fromBl(n.camera.target)); camera.fov = n.camera.fov_deg || camera.fov; camera.updateProjectionMatrix(); controls.update(); }
+  if (n.weights?.length) { $('bone').value = n.weights[0][0]; }
+  selectNote(id);
+}
+async function refreshNotes() {
+  try { const r = await fetch('/api/notes'); S.notes = (await r.json()).notes || []; } catch (e) { return; }
+  renderNotes();
+}
+
+// ---------------------------------------------------------------- UI wiring
+function refreshClips() {
+  const names = new Set(); (A.m?.clips || []).forEach((c) => names.add(c.name));
+  $('clip').innerHTML = '<option value="">rest pose</option>' + [...names].map((n) => `<option>${n}</option>`).join('');
+  if (names.has(curClip)) $('clip').value = curClip; else curClip = '';
+}
+$('modelA').onchange = async () => { await load(A, $('modelA').value); refreshClips(); refreshBones(); applyMode(A); setTime(0); renderPins(); };
+$('modelB').onchange = async () => { await load(B, $('modelB').value); refreshBones(); applyMode(B); setTime(curTime); $('tagB').style.display = B.m ? '' : 'none'; };
+$('clip').onchange = () => { curClip = $('clip').value; [A, B].forEach((s) => setClip(s, curClip)); setTime(0); drawMarks(); };
+$('play').onclick = () => { playing = !playing; $('play').textContent = playing ? '❚❚' : '▶'; };
+$('time').oninput = () => { playing = false; $('play').textContent = '▶'; setTime(parseFloat($('time').value) * duration()); };
+document.querySelectorAll('input[name=mode]').forEach((r) => (r.onchange = () => { applyMode(A); applyMode(B); }));
+['bone', 'wire', 'bones', 'grid', 'pins'].forEach((id) => ($(id).onchange = () => { applyMode(A); applyMode(B); }));
+$('showResolved').onchange = renderNotes;
+window.addEventListener('keydown', (e) => {
+  if (editing || e.target.tagName === 'TEXTAREA') return;
+  if (e.key === ' ') { $('play').click(); e.preventDefault(); }
+  const d = duration(), step = 1 / fps();
+  if (e.key === 'ArrowRight' && d) setTime(Math.min(d, curTime + step));
+  if (e.key === 'ArrowLeft' && d) setTime(Math.max(0, curTime - step));
+  if (e.key === 'n' && pick) openForm(false);
+});
+
+// ---------------------------------------------------------------- render loop
+function aspect() { const r = canvas.getBoundingClientRect(); return (B.m ? r.width / 2 : r.width) / r.height; }
+function resize() {
+  const r = canvas.getBoundingClientRect();
+  if (canvas.width !== Math.round(r.width * devicePixelRatio) || canvas.height !== Math.round(r.height * devicePixelRatio)) renderer.setSize(r.width, r.height, false);
+}
+function updateLabels() {
+  const r = canvas.getBoundingClientRect(), w = B.m ? r.width / 2 : r.width, v = new THREE.Vector3();
+  const pins = A.scene.getObjectByName('__pins');
+  $('labels').querySelectorAll('.pinlabel').forEach((l) => {
+    const m = pins.children.find((c) => c.userData.id === l.dataset.id);
+    if (!m || !pins.visible) { l.style.display = 'none'; return; }
+    v.copy(m.position).project(camera);
+    l.style.display = v.z < 1 ? '' : 'none';
+    l.style.left = ((v.x + 1) / 2) * w + 'px'; l.style.top = ((1 - v.y) / 2) * r.height + 'px';
+  });
+}
+function loop() {
+  requestAnimationFrame(loop);
+  resize();
+  const dt = clock.getDelta();
+  if (playing && duration()) { let t = curTime + dt; if (t > duration()) t = 0; setTime(t); }
+  controls.update();
+  const r = canvas.getBoundingClientRect();
+  camera.aspect = aspect(); camera.updateProjectionMatrix();
+  if (B.m) {
+    const w = Math.floor(r.width / 2);
+    renderer.setScissorTest(true);
+    renderer.setViewport(0, 0, w, r.height); renderer.setScissor(0, 0, w, r.height); renderer.render(A.scene, camera);
+    renderer.setViewport(w, 0, r.width - w, r.height); renderer.setScissor(w, 0, r.width - w, r.height); renderer.render(B.scene, camera);
+    renderer.setScissorTest(false);
+  } else { renderer.setViewport(0, 0, r.width, r.height); renderer.render(A.scene, camera); }
+  updateLabels();
+}
+
+// ---------------------------------------------------------------- start
+(async () => {
+  try {
+    S = { ...S, ...(await (await fetch('/api/state')).json()) };
+    S.marks = S.motion_qa_marks || {};
+    $('proj').textContent = 'Review · ' + (S.project || '');
+    const opts = S.models.map((m) => `<option value="${m.path}">${m.path}</option>`).join('');
+    $('modelA').innerHTML = opts; $('modelB').innerHTML = '<option value="">— none —</option>' + opts;
+    if (!S.models.length) { $('err').textContent = 'No .glb in this project yet — publish one from Blender (review_notes.py mode=publish).'; }
+    else {
+      await load(A, S.models[0].path);
+      if (S.models.some((m) => m.path === 'review/previous.glb') && S.models[0].path === 'review/current.glb') {
+        $('modelB').value = 'review/previous.glb'; await load(B, 'review/previous.glb'); $('tagB').style.display = '';
+        $('tagA').textContent = 'A · current'; $('tagB').textContent = 'B · previous';
+      }
+      refreshClips(); refreshBones(); applyMode(A); applyMode(B); setTime(0);
+    }
+    renderNotes();
+    setInterval(() => { if (!editing) refreshNotes(); }, 4000);
+    loop();
+  } catch (e) { $('err').textContent = String(e); console.error(e); }
+})();
+window.__review = { A, B, camera, controls, pickData, cast, setTime, goTo, get state() { return S; } };  // for automated checks
+</script>
+</body>
+</html>
