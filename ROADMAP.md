@@ -2,6 +2,18 @@
 
 Planned improvements for the Blender Skills Pack.
 
+## Shipped in v1.6.0 — Rigging, animation and meshing efficiency
+
+- [x] `anim_curves.py` (AnimAide-style curve ops, overlap, anim offset, loop window) and `motion_qa.py` (kiln measures)
+- [x] `game_skeleton.py`: engine audit + export rig with one root and baked clips (GameRig problem set, any rig)
+- [x] `mesh_cleanup.py`: guarded cleanup/decimate with before/after counts, pose measure
+
+Next:
+- [ ] `motion_qa` arm-through-body and foot-slide on skin (kiln `motion_measure`), contact-sheet render of flagged frames
+- [ ] `game_skeleton` rename presets (Unity Humanoid, UE Mannequin, Mixamo) and FBX export check
+- [ ] Quadruped walk generator: auto-lower hips until reach ≤ 95 % (kiln `quadruped.py` rule)
+- [ ] Wire `run_v16_tests.py` into CI with headless Blender
+
 ## Shipped in v1.5.0 — Any model: analysis, questions, new motion types
 
 - [x] `structure_analysis.py`: archetypes from geometry with questions only where needed

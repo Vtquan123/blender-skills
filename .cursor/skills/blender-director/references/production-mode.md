@@ -56,13 +56,13 @@ The planner enables stages from **intake facts × output spec**. It never enable
 |------|-------|----------------------------------|------------------|
 | G0 | Intake | File imports; no missing images; units, scale, orientation recorded; weld result | No |
 | G1 | Plan | Required spec fields present; strategy consistent with category | **Yes** |
-| G2 | Geometry | Triangles ≤ budget; non-manifold = 0; transforms applied; silhouette deviation vs source | Spec |
+| G2 | Geometry | Triangles ≤ budget; non-manifold = 0; transforms applied; no duplicate vertices; silhouette deviation vs source (cleanup: `mesh_cleanup.py`) | Spec |
 | G3 | Surface | UV overlap (unless intended); texel density; bake maps present and non-empty; material count | Spec |
 | G4a | Deform mesh | Joint loop rules met per joint; budget; silhouette | **Yes** (creatures) |
 | G4b | Rig + weights | No unweighted verts; ≤ max influences; normalized; rigid parts 1.0 to one bone; far weights ≤ 0.2 % | No |
 | G4c | ROM test | Per-joint volume loss, stretch, intersections, twist collapse within spec thresholds | **Yes** (creatures) |
-| G5 | Animation | All clips present; fps/frame range; loop seam delta; foot slide; skin folds over each clip (`deform_check.py`); similarity sheet vs source | Spec |
-| G6 | Export | glTF-Validator 0 errors; axis/scale; clip names | No |
+| G5 | Animation | All clips present; fps/frame range; loop seam delta; foot slide; skin folds over each clip (`deform_check.py`); limb reach, joint pops, jitter, skin under floor, closing key (`motion_qa.py`; fixes with `anim_curves.py`); similarity sheet vs source | Spec |
+| G6 | Export | glTF-Validator 0 errors; axis/scale; clip names; one skeleton root, no B-Bones, no deform scale (`game_skeleton.py` audit; engines: export rig) | No |
 | G7 | Web | File size, draw calls, texture memory; headless three.js load + play every clip; Blender↔three.js vertex check (skinned and rigid meshes); every clip moves | No |
 | G8 | Deliver | Report complete; `input/` checksums unchanged | User reads report |
 

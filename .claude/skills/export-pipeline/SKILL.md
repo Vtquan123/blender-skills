@@ -172,4 +172,5 @@ Compression: Draco or Meshopt (if supported by the target; recent Blender
 | Topic | Reference | Load When |
 |-------|-----------|-----------|
 | Engine import | `references/engine-import.md` | First import test |
+| Game-ready skeleton | `../rigging/references/game-ready-skeleton.md` | Skinned characters for engines |
 | Validation | `../references/validation-checklist.md` | Pre-export gate |

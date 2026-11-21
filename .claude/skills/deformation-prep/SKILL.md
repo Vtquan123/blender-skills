@@ -85,6 +85,9 @@ Web runtimes use linear blend skinning and read four influences per vertex; desi
 | Retopology craft | `../retopology/SKILL.md` | Step 4 |
 | Rigging craft | `../rigging/SKILL.md` | Steps 6–7 |
 | Web skinning limits | `../web-export/references/web-runtime-limits.md` | Steps 6–7 |
+| Weld and cleanup before skinning | `../blender-modeler/references/mesh-cleanup.md` | Steps 4, 7 |
+| Engine skeleton after rigging | `../rigging/references/game-ready-skeleton.md` | Step 6, before export |
+| Motion measures under real clips | `../animation/references/motion-quality.md` | After step 8 |
 
 ## Knowledge Reference
 

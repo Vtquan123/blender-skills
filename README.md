@@ -7,7 +7,7 @@
 **97 Specialized Skills for Blender Artists.**
 **Transform Cursor, Claude Code, Kiro, and Codex into your Senior Technical Art team — not a tutorial bot.**
 
-[![Version](https://img.shields.io/badge/version-1.5.0-blue.svg)](version.json)
+[![Version](https://img.shields.io/badge/version-1.6.0-blue.svg)](version.json)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Skills](https://img.shields.io/badge/skills-97-orange.svg)](.claude/skills/)
 [![Blender MCP](https://img.shields.io/badge/Blender_MCP-integrated-blueviolet.svg)](docs/BLENDER_MCP_SETUP.md)
@@ -187,6 +187,13 @@ blender-director → asset-intake → deformation-prep → texture-workflow
   gates G0–G8, checkpoints, state.json resume; specs in production/templates/
 ```
 
+### Rig → Animate → Engine (v1.6 toolkit)
+```
+mesh_cleanup.py (weld, guarded decimate) → deformation-prep → rig_fit / skin_weights
+→ generators.py → anim_curves.py (smooth, overlap, offset, loop) ⇄ motion_qa.py (reach, pops, jitter, floor, seam)
+→ game_skeleton.py (audit → export rig: one root, no B-Bones/scale, baked clips) → export_glb / FBX
+```
+
 ### Reference Image Match
 ```
 blender-director → reference-image-match.md
@@ -213,7 +220,7 @@ Every skill in this pack:
 
 ```
 .claude-plugin/           # Claude Code plugin manifest
-.claude/skills/           # 97 skills + 188 reference files
+.claude/skills/           # 97 skills + 192 reference files
   ├── blender-director/
   ├── hard-surface/
   ├── prop-artist/
@@ -295,8 +302,10 @@ MIT License — See [LICENSE](LICENSE) for details.
 
 <div align="center">
 
-**Built for Cursor, Claude Code, Kiro & Codex** | **Blender MCP** | **97 Skills** | **188 Reference Files**
+**Built for Cursor, Claude Code, Kiro & Codex** | **Blender MCP** | **97 Skills** | **192 Reference Files**
 
-Inspired by [jeffallan/claude-skills](https://github.com/Jeffallan/claude-skills)
+Inspired by [jeffallan/claude-skills](https://github.com/Jeffallan/claude-skills).
+Animation, rigging and cleanup methods informed by [elithril/blender-kiln](https://github.com/elithril/blender-kiln) (MIT),
+[aresdevo/animaide](https://github.com/aresdevo/animaide) and [Arminando/GameRig](https://github.com/Arminando/GameRig) — ideas re-implemented, no GPL code included.
 
 </div>

@@ -6,6 +6,52 @@ Format: [Semantic Versioning](https://semver.org/) — `Major.Minor.Patch`
 
 ---
 
+## [1.6.0] — 2026-11-22
+
+Rigging, animation and meshing efficiency. Methods studied in elithril/blender-kiln (MIT), aresdevo/animaide
+(GPL-3) and Arminando/GameRig (GPL-2); everything here is an independent implementation — no GPL code is included.
+
+### Added
+- **`anim_curves.py`** — Graph Editor moves as MCP calls (AnimAide-style): tween, blend to neighbour / frame / rest,
+  push-pull, smooth, ease, scale, time offset, wave/noise, anim offset with falloff mask (`delta` or `from_pose`),
+  chain overlap (`follow`: delayed driver rotation carried through rest orientations; `delay`), `match_cycle`
+  (closing key = first, quaternion signs fixed), `loop_window` (best looping window of a generated/mocap clip →
+  new action, cross-faded, root drift removed), resample, clean, interpolation, backup/restore
+  (`animation/references/curve-polish.md`)
+- **`motion_qa.py`** — kiln's motion measures for G5 on any rig: limb reach vs rest length, knee/elbow pops,
+  per-bone jitter, skin under the floor, standing foot pitch, loop seam ratio and closing key; limbs found by name
+  (Rigify, Mixamo, kiln) (`animation/references/motion-quality.md`)
+- **`game_skeleton.py`** — audit (deform roots, deform bones under ORG/MCH, B-Bones, stretch, deform scale in clips,
+  >4 influences, unweighted, dead bones, kiln's verts-per-bone density) and `export_rig`: a deform-only armature with
+  one root (following the control root), hierarchy rebuilt through ORG twins (Rigify's reversed tails handled),
+  no B-Bones, location+rotation only, clips baked, meshes copied or retargeted, parity reported
+  (`rigging/references/game-ready-skeleton.md`)
+- **`mesh_cleanup.py`** — kiln's cleanup order with bmesh (weld, loose, degenerate, holes, normals, n-gons,
+  transforms, guarded decimate, origin at base), before/after counts incl. duplicate vertices and components,
+  decimate undone and relaxed (up to 2× target) when it opens the mesh, `protect_group`, print mode, tier budgets,
+  T/A/I pose measure (`blender-modeler/references/mesh-cleanup.md`)
+- `production/tests/run_v16_tests.py` — procedural regression tests for the four scripts (throw-away scene)
+
+### Measured
+- Project cat, existing `AN_walk` (Rigify, 11.9 k vertices): `motion_qa` found hind legs at 98.6 % reach, 8 knee
+  pops and 10.3° jitter (invisible on stills); `anim_curves smooth` → 96 %, 0 pops, 5.7°
+- Same rig: glTF skin exported from the control rig had 16 root joints; from `game_skeleton` export rig 1 root,
+  49 joints, parity 0.000 mm bone heads / 0.006 mm skin over both baked clips
+- Project dog (Tripo, 1.92 M triangles, 128 pieces, 20,758 doubled vertices): `mesh_cleanup` → 20 K triangles,
+  1 piece, open edges 41,081 → 2, 65 s
+
+### Changed
+- `animation`, `rigging` (1.2.0), `blender-modeler` (1.1.0), `export-pipeline`, `deformation-prep`: new references
+  and MCP steps; Production Mode G2/G5/G6 rows list the new checks
+- References **188 → 192**
+
+### Fixed (found while building the tests)
+- Blender 5 creates F-curves only for an assigned action slot: `anim_curves` assigns temporarily and restores
+- `EditBone.matrix` assignment flipped some rolls by ~180° when copying a rest pose; export rig copies head/tail
+  and aligns roll to the source Z axis, and refuses a rest pose that differs (> 0.01° / mm)
+
+---
+
 ## [1.5.0] — 2026-11-20
 
 ### Added

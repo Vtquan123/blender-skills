@@ -4,7 +4,7 @@ description: Game-ready animation in Blender including walk/run/idle cycles, com
 license: MIT
 metadata:
   author: https://github.com/arjun988
-  version: "1.1.0"
+  version: "1.2.0"
   domain: blender
   role: specialist
   triggers: animation, animate, walk cycle, run cycle, idle, combat, NLA, graph editor, keyframe, animate like this video, imitate GIF, motion brief, animation source
@@ -74,6 +74,8 @@ Naming: `AN_[Char]_[Action]_[Variant]`
 5. Clean: Remove redundant keys
 ```
 
+Through the MCP the same moves are script calls: `production/scripts/blender/anim_curves.py` — tween, blend to neighbour/frame/rest, push/pull, smooth, ease, scale, time offset, wave/noise, anim offset with falloff, chain overlap (follow-through), `match_cycle` (closing key = first key), `loop_window` (best looping window of a generated or mocap clip), clean, interpolation, backup/restore (`references/curve-polish.md`). Edit controls, then measure the clip with `motion_qa.py` (`references/motion-quality.md`).
+
 ## NLA for Game Export
 
 ```
@@ -98,6 +100,8 @@ Naming: `AN_[Char]_[Action]_[Variant]`
 3. Validate bone/object animation data exists pre-export
 4. Set frame range via MCP
 5. Export animation with rig via export-pipeline
+6. Polish keys with `anim_curves.py`; measure every clip with `motion_qa.py` (reach, joint pops, jitter, skin under floor, seam, closing key) before showing it
+7. Game engines: bake clips onto the export rig (`game_skeleton.py mode=export_rig`, `../rigging/references/game-ready-skeleton.md`)
 
 ## Game-Ready Requirements
 
@@ -132,3 +136,5 @@ Naming: `AN_[Char]_[Action]_[Variant]`
 | Combat timing | `references/combat-animation.md` | Action games |
 | Reference-driven motion (video/GIF/description) | `references/reference-driven-motion.md` | Clip must imitate a user source |
 | Web runtime limits | `../web-export/references/web-runtime-limits.md` | Clips for browsers |
+| Curve polish through the MCP (AnimAide-style ops) | `references/curve-polish.md` | Fixing pops, overlap, offsets, loops |
+| Motion quality measures and fixes | `references/motion-quality.md` | Every clip before review (G5) |

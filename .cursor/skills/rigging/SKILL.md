@@ -4,7 +4,7 @@ description: Production rigging in Blender with armatures, IK/FK, constraints, w
 license: MIT
 metadata:
   author: https://github.com/arjun988
-  version: "1.1.0"
+  version: "1.2.0"
   domain: blender
   role: specialist
   triggers: rig, rigging, armature, bone, IK, FK, weight paint, constraint, facial rig, driver, Rigify, metarig, twist bone, rigid part, hinge
@@ -116,6 +116,7 @@ Minimum game facial: jaw open, blink L/R, brow up/down.
 3. Query bone count and hierarchy
 4. Validate weight groups via MCP if supported
 5. Export armature with mesh via export-pipeline
+6. Before any engine export: `game_skeleton.py` audit (roots, B-Bones, scale, dead bones, density); `mode=export_rig` builds a deform-only skeleton with one root and baked clips (`references/game-ready-skeleton.md`)
 
 ## Deformation Test Poses
 
@@ -139,7 +140,8 @@ Minimum game facial: jaw open, blink L/R, brow up/down.
 - Scale bones in bind pose
 - Rig before topology validated
 - Skip IK pole targets on limbs
-- Mix multiple root bones without documentation
+- Mix multiple root bones without documentation (a Rigify rig exports 16 skeleton roots: ship the export rig)
+- Ship B-Bones or scaled deform bones to an engine
 
 ## Reference Guide
 
@@ -150,3 +152,4 @@ Minimum game facial: jaw open, blink L/R, brow up/down.
 | Existing mesh → animatable | `../deformation-prep/SKILL.md` | Source is a scan/sculpt/AI mesh |
 | Category templates | `../deformation-prep/references/category-rigs.md` | Human, dog, cat, parrot, book, box, chair, table |
 | ROM test | `../deformation-prep/references/rom-test.md` | Before animation |
+| Game-ready skeleton (single hierarchy, root, baked clips) | `references/game-ready-skeleton.md` | Unity / Unreal / Godot / glTF export of a Rigify or custom rig |

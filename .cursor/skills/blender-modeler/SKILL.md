@@ -4,7 +4,7 @@ description: Core Blender modeling specialist for Edit Mode, modifiers, collecti
 license: MIT
 metadata:
   author: https://github.com/arjun988
-  version: "1.0.0"
+  version: "1.1.0"
   domain: blender
   role: specialist
   triggers: model, blockout, edit mode, modifier, collection, mesh, primitive, snap, pivot, scene organization
@@ -118,6 +118,9 @@ Prefer instances over duplicate geometry for repeated elements.
 - [ ] Apply scale if modifiers depend on it
 - [ ] Verify manifold (no holes unless intentional)
 - [ ] Check triangle count vs budget
+- [ ] No duplicate vertices left before UVs or skinning (split edges open the skin at joints)
+
+Run it as one guarded call: `production/scripts/blender/mesh_cleanup.py` (weld → loose → degenerate → normals → transforms → guarded decimate → origin at base, before/after counts, decimate undone when it opens the mesh) — `references/mesh-cleanup.md`.
 
 ## MCP Integration
 
@@ -153,6 +156,7 @@ See `../references/mcp-integration.md`
 |-------|-----------|-----------|
 | Modifier deep dive | `references/modifier-stack.md` | Complex modifier chains |
 | Scene organization | `references/scene-organization.md` | Large scenes |
+| Mesh cleanup (order, guards, budgets, AI meshes) | `references/mesh-cleanup.md` | Imported, generated or scanned meshes; before UVs/rigging/export |
 | Pipeline | `../references/asset-pipeline.md` | Phase context |
 
 ## Handoff Points
