@@ -26,10 +26,20 @@ Format: [Semantic Versioning](https://semver.org/) — `Major.Minor.Patch`
   Output spec `geometry.remesher`.
 - `production/tests/run_autoremesh_tests.py` — probe, error path, fallback (always run); sphere, deform mesh with
   a joint, weld shells (skipped without the extension).
+- **Material Maker maps** — `production/scripts/blender/material_maker.py` runs the user-installed
+  [Material Maker](https://github.com/RodZill4/material-maker) (MIT) command-line export on a `.ptex` graph (an
+  example by name or the user's file). It overrides node parameters (`params`) and exposed controls (`controls`) in
+  a copy of the graph, then builds a glTF-ready material the way `bake_maps.py` does: Principled BSDF, ORM split,
+  glTF occlusion group, and tiling exported as `KHR_texture_transform`. Profiles: `GLTF/Plane` (albedo/ORM/normal/
+  emission) and `Blender` (separate roughness/metal/occlusion EXR). Modes: probe, list, export, material
+  (from maps on disk) and apply. Guide: `materials/references/material-maker.md`.
+- `production/tests/run_material_maker_tests.py` — overrides, material + glTF export check, CLI contract against a
+  stand-in executable (always run); real export (skipped without the app).
 
 ### Changed
 - `retopology`, `deformation-prep` (`joint-loop-rules.md`), `production-mode.md` and `docs/BLENDER_MCP_SETUP.md`
   document when to choose AutoRemesher over QuadriFlow and how to install it.
+- `materials` skill and `docs/BLENDER_MCP_SETUP.md` document Material Maker (when to use it, install, limits).
 
 ---
 

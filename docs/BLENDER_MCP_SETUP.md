@@ -112,10 +112,21 @@ Production Mode can build quad bases with [AutoRemesher for Blender](https://git
 
 The skills only call the extension's compiled core (`autoremesher_core`, MIT) in a separate process; its add-on code (GPL-3.0) is not part of this pack. The extension's author reports testing on macOS Apple Silicon only so far — on other platforms, use `remesher: auto` so a failure falls back to QuadriFlow.
 
+## Optional App — Material Maker
+
+`materials` can export tileable PBR maps from [Material Maker](https://github.com/RodZill4/material-maker) graphs (`production/scripts/blender/material_maker.py`, guide: `.claude/skills/materials/references/material-maker.md`).
+
+1. Install the app from the [releases page](https://github.com/RodZill4/material-maker/releases): macOS `.dmg` → drag to Applications; Windows `.zip`; Linux `.tar.gz`.
+2. It is found automatically in `/Applications` (macOS), `Program Files` / `%LOCALAPPDATA%` (Windows), or on `PATH` / in `~` (Linux). Otherwise, set `MATERIAL_MAKER_PATH` to the executable, or pass `mm_path`.
+3. Check from the agent: run `material_maker.py` with `{"mode": "probe"}`. It should return `available: true` and a list of examples.
+
+The export opens a window and renders on the GPU, so it needs a desktop session.
+
 ## Troubleshooting
 
 | Issue | Fix |
 |-------|-----|
+| `material_maker.py` export "no maps written" | Desktop session with a GPU required; re-run once (a first launch can be slow or interrupted) |
 | Cannot connect to Blender at `localhost:9876` | Blender not running, add-on disabled, or (official) Online Access off |
 | `autoremesh.py` probe `available: false` | Extension not installed, or the zip does not match the Blender version (5.1+ vs `-blender42-`); reinstall the right zip |
 | Two add-ons fighting over 9876 | Disable one of them |

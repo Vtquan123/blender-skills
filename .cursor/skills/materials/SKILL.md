@@ -7,7 +7,7 @@ metadata:
   version: "1.0.0"
   domain: blender
   role: specialist
-  triggers: material, shader, PBR, procedural, metal, wood, fabric, glass, rust, moss, Principled BSDF
+  triggers: material, shader, PBR, procedural, metal, wood, fabric, glass, rust, moss, Principled BSDF, Material Maker, ptex, tileable texture
   related-skills: texture-workflow, uv-workflow, lighting, rendering
 ---
 
@@ -67,6 +67,8 @@ Instance variations: duplicate master, adjust parameters only.
 **Dirt accumulation:** AO inverted → multiply with dirt color
 **Rust:** Noise mask on metal → orange/brown color override
 
+**Material Maker (optional app):** for tileable PBR sets (bricks, wood, rock, tiles, metal patterns), `production/scripts/blender/material_maker.py` exports a `.ptex` graph with the Material Maker app and builds a glTF-ready material: Principled BSDF, ORM split and glTF occlusion. Shader-node procedurals do not survive a glTF export; these maps do. Use the 43 examples by name or the user's own `.ptex`, and set node parameters and exposed controls per call. Probe first; if it is not installed, tell the user — never download it yourself. See `references/material-maker.md`.
+
 ## Material Count Budget
 
 | Asset Type | Max Materials |
@@ -121,3 +123,4 @@ See stylized-style skill. Key differences:
 |-------|-----------|-----------|
 | Surface recipes | `references/surface-recipes.md` | Specific materials |
 | Procedural nodes | `references/procedural-patterns.md` | Wear, dirt, variation |
+| Material Maker maps | `references/material-maker.md` | Tileable PBR sets from `.ptex` graphs, exportable textures |
