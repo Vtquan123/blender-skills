@@ -6,6 +6,33 @@ Format: [Semantic Versioning](https://semver.org/) — `Major.Minor.Patch`
 
 ---
 
+## [Unreleased]
+
+### Added
+- **AutoRemesher backend** — `production/scripts/blender/autoremesh.py` runs the core of the optional
+  [AutoRemesher for Blender](https://github.com/jakeblakeley/autoremesher-blender) extension (`autoremesher_core`,
+  MIT) in a subprocess of Blender's Python, so a native crash cannot take Blender or the MCP session down. Blocks
+  until done (MCP-friendly, `timeout`), `mode: probe` reports whether this Blender can load it and which zip to
+  install. Options: adaptivity, edge scaling, sharp edges, smooth normals, island detail, preserve thin features,
+  hard surface, voxel `weld_shells`. Budget fitting: the core's count is approximate and shape-dependent
+  (63k-tri inputs: Suzanne at adaptivity 1 plateaus far below the target, 32k → 3.6k quads; a thin tube at
+  adaptivity 0 stays at 3–8k whatever the request). The script re-scales the request until faces land within
+  ±20% (`fit_target`, `max_passes`), switches adaptivity 0 ↔ 1 when the count stops following the request,
+  drops `preserve_thin` with a warning when still over budget (`budget_strict`), and caps all passes with
+  `total_timeout`. Independent implementation — none of the extension's GPL-3.0 add-on code is
+  included, and the extension is never bundled or downloaded by the scripts.
+- `deform_mesh.py` `remesher: quadriflow | autoremesher | auto` (+ `autoremesher` options); `auto` falls back to
+  QuadriFlow when the extension is missing or fails, and the result reports `remesh.used` / `remesh.fallback`.
+  Output spec `geometry.remesher`.
+- `production/tests/run_autoremesh_tests.py` — probe, error path, fallback (always run); sphere, deform mesh with
+  a joint, weld shells (skipped without the extension).
+
+### Changed
+- `retopology`, `deformation-prep` (`joint-loop-rules.md`), `production-mode.md` and `docs/BLENDER_MCP_SETUP.md`
+  document when to choose AutoRemesher over QuadriFlow and how to install it.
+
+---
+
 ## [1.6.0] — 2026-11-22
 
 Rigging, animation and meshing efficiency. Methods studied in elithril/blender-kiln (MIT), aresdevo/animaide

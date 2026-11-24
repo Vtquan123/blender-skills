@@ -37,11 +37,14 @@ High-Poly Reference → Guide Setup → Block Retopo → Loop Refinement
 | Shrinkwrap retopo | Creatures, organic | Medium |
 | Quad Remesh (voxel) | Quick blockout retopo | Fast, needs cleanup |
 | Instant Meshes (external) | Background assets | Fast |
+| AutoRemesher (optional extension) | Dense organic sculpts/scans, kitbashed or non-manifold meshes | Fast, even adaptive quads |
 | Symmetry retopo | Bilateral characters | Medium |
 
 **Production default:** Manual with shrinkwrap for hero; Quad Remesh + cleanup for background.
 
-**Automated (Production Mode):** QuadriFlow base at the spec budget → script-enforced joint loops → shrinkwrap → per-joint measurement → user review (gate G4a). Rules and procedure: `../deformation-prep/references/joint-loop-rules.md`. Static assets that only need fewer triangles use decimation + normal bake via `asset-optimization` instead.
+**AutoRemesher backend:** `production/scripts/blender/autoremesh.py` calls the AutoRemesher extension's core in a separate process (a crash cannot take Blender down). Check with `mode: "probe"`; if it is not installed, tell the user which release zip to install — never download it yourself. Prefer it over QuadriFlow for dense organic meshes, thin parts (claws, horns: `preserve_thin`), small floating parts (`island_detail`) and meshes QuadriFlow rejects as non-manifold; keep QuadriFlow when X symmetry is required. Budget control: the core's face count is approximate and shape-dependent, so the script re-runs until faces are within ±20% (`fit_target`). When the count stops following the request it switches `adaptivity` between 0 and 1 (leave `adaptivity` unset to allow this). If thin-feature sizing still breaks the budget, it drops `preserve_thin` and warns (`budget_strict: false` keeps it). Check `settings` and `warnings` in the result.
+
+**Automated (Production Mode):** quad base (QuadriFlow, or AutoRemesher with `deform_mesh.py remesher: auto|autoremesher`) at the spec budget → script-enforced joint loops → shrinkwrap → per-joint measurement → user review (gate G4a). Rules and procedure: `../deformation-prep/references/joint-loop-rules.md`. Static assets that only need fewer triangles use decimation + normal bake via `asset-optimization` instead.
 
 ## Edge Loop Rules
 

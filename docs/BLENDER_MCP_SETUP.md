@@ -100,11 +100,24 @@ Claude Code CLI: `claude mcp add blender -- uvx --python 3.11 blender-mcp` (Wind
 2. Ask for a viewport screenshot.
 3. For Production Mode, run the capability probe described in `docs/BLENDER_MCP_CAPABILITIES.md`.
 
+## Optional Extension — AutoRemesher
+
+Production Mode can build quad bases with [AutoRemesher for Blender](https://github.com/jakeblakeley/autoremesher-blender) instead of QuadriFlow (`deform_mesh.py remesher: autoremesher | auto`, spec `geometry.remesher`). Nothing else needs it.
+
+1. Download the zip for your platform from the [releases page](https://github.com/jakeblakeley/autoremesher-blender/releases):
+   - Blender **5.1+** → `autoremesher-<version>-<platform>.zip` (`macos_arm64`, `macos_x64`, `windows_x64`, `linux_x64`)
+   - Blender **4.2 LTS–5.0** → `autoremesher-<version>-blender42-<platform>.zip`
+2. **Edit → Preferences → Get Extensions → ▾ (top right) → Install from Disk…** → pick the zip. Keep it enabled.
+3. Check from the agent: run `production/scripts/blender/autoremesh.py` with `{"mode": "probe"}` — `available: true` and a `core_dir`.
+
+The skills only call the extension's compiled core (`autoremesher_core`, MIT) in a separate process; its add-on code (GPL-3.0) is not part of this pack. The extension's author reports testing on macOS Apple Silicon only so far — on other platforms, use `remesher: auto` so a failure falls back to QuadriFlow.
+
 ## Troubleshooting
 
 | Issue | Fix |
 |-------|-----|
 | Cannot connect to Blender at `localhost:9876` | Blender not running, add-on disabled, or (official) Online Access off |
+| `autoremesh.py` probe `available: false` | Extension not installed, or the zip does not match the Blender version (5.1+ vs `-blender42-`); reinstall the right zip |
 | Two add-ons fighting over 9876 | Disable one of them |
 | "Blender executable not found" on `*_for_cli` | Set `BLENDER_PATH` for the MCP server process |
 | `result` must be a dict (official) | Return `result = {...}` from `execute_blender_code` |

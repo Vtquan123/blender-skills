@@ -38,7 +38,7 @@ The planner enables stages from **intake facts × output spec**. It never enable
 | Intake fact / spec field | Stage decision |
 |--------------------------|----------------|
 | `triangles` > `budgets.triangles` and asset static | `geometry.strategy: decimate` (+ bake normal from source) |
-| `triangles` > budget and asset must deform | `geometry.strategy: retopo` via `deformation-prep` (joint loops), bake from source |
+| `triangles` > budget and asset must deform | `geometry.strategy: retopo` via `deformation-prep` (joint loops), bake from source; quad base from `geometry.remesher` (`quadriflow` / `autoremesher` / `auto` → `deform_mesh.py remesher`) |
 | Mesh split along UV seams (many components, many boundary edges) | Weld in intake before any analysis |
 | Structure archetype (`reports/structure.json`, confirmed by the user when asked) | Rig and clips per `motion-analysis.md` §2: `skinned` → `deformation-prep` → `rigging` → `animation`; `rigid_whole`/`rigid_parts` → `rigid_rig.py` or `hinge_rig.py`, no skinning; `chain_flex` → `chain_rig.py` + skin; `morph` → shape keys |
 | Category preset (`asset.category`) | Prior only: fills defaults the user has not set; when it disagrees with the structure, show both and ask |
