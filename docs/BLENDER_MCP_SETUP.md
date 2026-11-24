@@ -122,11 +122,38 @@ The skills only call the extension's compiled core (`autoremesher_core`, MIT) in
 
 The export opens a window and renders on the GPU, so it needs a desktop session.
 
+## Optional — MoCapAnything V2 (video motion capture)
+
+`animation` can capture motion from a video and retarget it onto a project rig (`production/scripts/blender/mocap_capture.py`, guide: `.claude/skills/animation/references/video-mocap.md`). It runs in its own Python environment, outside Blender. Download size: about 3 GB in total.
+
+1. Clone the repository and create the environment (Python 3.11, e.g. with `uv`):
+   ```bash
+   git clone https://github.com/kehong-gong/MoCapAnything ~/MoCapAnything
+   cd ~/MoCapAnything && uv venv --python 3.11 .venv && uv pip install --python .venv/bin/python -r requirements.txt
+   ```
+   If pip reports a conflict between the pinned `huggingface-hub` and `transformers`, keep the `huggingface-hub` version that `transformers` needs.
+2. Download the checkpoint into `checkpoints/` and the demo data into `demo/data/` (`zoo1030`: 80 animal reference skeletons), as described in the repository's README / `RUN.md`.
+3. The first capture downloads `facebook/dinov2-large` and `briaai/RMBG-1.4` from Hugging Face (≈ 1.5 GB).
+4. Another location: set `MOCAPANYTHING_HOME`, or pass `home` / `python`.
+5. Check from the agent: run `mocap_capture.py` with `{"mode": "probe"}`. It should return `available: true`, the number of rigs, and `cuda` / `mps`.
+
+Things to know:
+
+- **Speed:** without CUDA it uses Apple's GPU (MPS) or the CPU. On an M1 Pro, a 2 s clip takes about 30 s on MPS and 66 s on CPU. A 10 s 1080p clip takes about 7 min on CPU.
+- **Licences:**
+  - The code and the released weights are MIT.
+  - RMBG-1.4 is non-commercial.
+  - The zoo1030 characters are Truebones Zoo data.
+  - Check the licences before a captured clip ships.
+
 ## Troubleshooting
 
 | Issue | Fix |
 |-------|-----|
 | `material_maker.py` export "no maps written" | Desktop session with a GPU required; re-run once (a first launch can be slow or interrupted) |
+| `mocap_capture.py` probe lists `missing` | Path in the message: checkout, `.venv`, `checkpoints/*.pt` or `demo/data/zoo1030/bvh_pose` |
+| Capture `rig '<X>' has no reference pose` | Use a name from `{"mode": "rigs"}`; people need a custom rig preprocessed first (CUDA) |
+| Capture slow or MCP call times out | `wait: false`, then poll `{"mode": "status", "out_dir": ...}`; trim with `start` / `duration` |
 | Cannot connect to Blender at `localhost:9876` | Blender not running, add-on disabled, or (official) Online Access off |
 | `autoremesh.py` probe `available: false` | Extension not installed, or the zip does not match the Blender version (5.1+ vs `-blender42-`); reinstall the right zip |
 | Two add-ons fighting over 9876 | Disable one of them |

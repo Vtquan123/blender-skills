@@ -135,6 +135,7 @@ Through the MCP the same moves are script calls: `production/scripts/blender/ani
 | Walk cycle breakdown | `references/walk-cycle.md` | Locomotion |
 | Combat timing | `references/combat-animation.md` | Action games |
 | Reference-driven motion (video/GIF/description) | `references/reference-driven-motion.md` | Clip must imitate a user source |
+| Video motion capture + retarget (MoCapAnything V2) | `references/video-mocap.md` | Clip must follow a video frame by frame (animals) |
 | Web runtime limits | `../web-export/references/web-runtime-limits.md` | Clips for browsers |
 | Curve polish through the MCP (AnimAide-style ops) | `references/curve-polish.md` | Fixing pops, overlap, offsets, loops |
 | Motion quality measures and fixes | `references/motion-quality.md` | Every clip before review (G5) |

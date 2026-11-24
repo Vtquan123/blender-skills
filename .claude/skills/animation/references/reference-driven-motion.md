@@ -70,4 +70,9 @@ Render the clip for review with `production/scripts/blender/preview_render.py` (
 
 ## 5. Optional: Precise Capture
 
-For complex human motion that must match closely (dance, sport), a mocap path can be added later (monocular video mocap or a mocap service, then retarget). It needs a GPU or an external account and its own licence review; it is not part of the default pipeline.
+When the clip must follow the video frame by frame (an animal's real gait, a jump, a specific performance), use video motion capture: `production/scripts/blender/mocap_capture.py` runs the user-installed MoCapAnything V2, imports the BVH and retargets it onto the project rig. See `video-mocap.md`.
+
+- It covers 80 animal reference skeletons out of the box. People need a human rig preprocessed for it first (CUDA).
+- On a Mac it runs on Apple's GPU (MPS): about 30 s for a 2 s clip on an M1 Pro.
+- It is optional and not part of the default pipeline. Probe first; never install it without the user.
+- Its background remover is licensed for non-commercial use only; tell the user before a captured clip ships.
