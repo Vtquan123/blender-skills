@@ -32,6 +32,8 @@ Rules every step must respect. Ask the user before doing anything that conflicts
 
 - _(e.g. "Do not animate the face", "The approved walk must not change when fixing the skin",
   "Paws point straight ahead", "Do not push without asking", budgets from `output-spec.yaml`)_
+- Review viewer at visual gates (G4a, G4c, G5, delivery): _ask each time_ (default) / always open it / never.
+  The agent checks in the viewer itself either way (`production-mode.md` §7a).
 
 ## 4. Decisions
 

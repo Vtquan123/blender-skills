@@ -61,6 +61,12 @@ Format: [Semantic Versioning](https://semver.org/) — `Major.Minor.Patch`
 - `materials` skill and `docs/BLENDER_MCP_SETUP.md` document Material Maker (when to use it, install, limits).
 - `animation`: new `references/video-mocap.md`; `reference-driven-motion.md` §5 now points to the optional capture
   path instead of "can be added later". `docs/BLENDER_MCP_SETUP.md` documents the MoCapAnything install.
+- **Review viewer at visual gates** (`production-mode.md` §7a, `review-notes.md → Agent Self-Check`): before
+  G4a, G4c, G5 and delivery the agent publishes the model, opens the local viewer and checks it itself (surface
+  modes, weights per joint bone, clip frames at key poses and motion-QA marks, close-ups), records problems as
+  `author: "agent"` notes, fixes and re-checks; then asks the user in the approval question whether to open the
+  viewer for them. Standing answer kept in `PROJECT.md` §3 (template line added). The server is stopped when the
+  gate closes. Found in the dog test run: the viewer was never opened, the user only saw screenshots.
 
 ---
 

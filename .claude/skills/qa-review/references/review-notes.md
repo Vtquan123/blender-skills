@@ -20,6 +20,9 @@
 
 ## Loop
 
+At every visual gate the agent runs its own check first (Agent Self-Check below) and asks whether the user wants
+to open the viewer (`production-mode.md` §7a).
+
 ```
 1. review_notes mode=publish  project_dir=projects/<name>  objects=[rig, mesh]  clips=[AN_*]
 2. review_notes mode=serve    → http://127.0.0.1:8765/  (runs inside Blender; tell the user to open it)
@@ -62,9 +65,35 @@ Standalone (without Blender running the server):
 - Timeline shows the Blender frame; red ticks = `reports/motion-qa.json` pops/jitter frames, orange =
   open notes. Space plays, ← → step one frame.
 
+## Agent Self-Check
+
+Before presenting a visual gate (G4a, G4c, G5, delivery) the agent reviews the published model in the viewer
+itself — it is the renderer that ships, so it catches what Blender screenshots miss (normal-map seams, weights
+that differ after export, a clip that differs from Blender). `production-mode.md` §7a says when.
+
+Drive the page with the browser tool's JavaScript and take screenshots; `window.__review` exposes
+`{A, B, camera, controls, setTime, goTo, cast, pickData, state}` for this:
+
+| Check | How | Problem when |
+|---|---|---|
+| Surface | modes `lit`, `clay`, `normals`; front, side, 3/4, below | Seams, faceting, holes, dark or stretched texels, normal map grid |
+| Weights per joint | mode `weights`, bone = each deform bone of the gate's joints (and its `_half` helper) | Colour outside the limb (ear weighting the neck, toe weighting the hip), hard edges at a joint |
+| Clip frames | `document.getElementById('clip').value = '<clip>'` + `dispatchEvent(new Event('change'))`, then `__review.setTime(t)` at key poses (contact, passing, lift), at every red tick (motion_qa pops/jitter) and at the deform_check fold frames | Creases, flipped faces, skin through the floor, paws twisting or crossing, legs locking straight |
+| Close-ups | `camera.position` / `controls.target` near paws, groin, armpit, neck, ears | Folds invisible in a wide shot |
+| Loop | last frame vs first | Visible jump |
+| A/B | after a fix: compare = `review/previous.glb` | The fix changed something it should not (an approved clip) |
+
+Record each problem as a note so the user sees it and it resolves to Blender data like theirs:
+`fetch('/api/note', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({...pickData(hit), text: '[agent] …', category: 'skin', status: 'open', author: 'agent'})})`
+(`hit` from `cast({clientX, clientY})` at the spot, or `scope: 'model'` for the whole model). Then `context`
+→ fix → `publish` → re-check → `reply` with before → after. Stop the server when done unless the user is using it.
+
 ## Rules
 
 - A `warnings` entry about distance means the mesh or rig changed after publishing: republish, ask the
   user to check the note again, never guess the spot.
 - Reply on every note you act on, with numbers (before → after); the user resolves or reopens.
-- The viewer is for the user's eye; Claude reads `notes.json` and `mode=context`, not screenshots.
+- The user's notes are read from `notes.json` / `mode=context`, never guessed from a screenshot. Screenshots are
+  for the agent's own self-check (above); a problem the agent sees becomes an `author: "agent"` note.
+- Ask the user whether they want to open the viewer at every visual gate, unless `PROJECT.md` §3 holds a standing
+  answer (`../../blender-director/references/production-mode.md` §7a).
