@@ -27,7 +27,7 @@ Schemas: `../../references/production-spec.md`. Project scaffolding: `production
 | ANALYZE | Intake → G0, then `structure_analysis.py` → `reports/structure.json` | Only the questions the analysis generates (archetype, front, fused parts, hinge, clips) — `motion-analysis.md` §3 |
 | PLAN | Strategy table → `plan.yaml` + production brief → G1 | **Always** (approve plan) |
 | PREVIEW | All enabled stages at preview settings (low remesh density, 512 px bakes, no LOD) | Shows screenshots and preview clips (`production/scripts/blender/preview_render.py`: separate scene with copies of the rig, ground, lights, follow camera, repeated clip with root motion; render in chunks, encode with ffmpeg) and the review viewer (`review_notes.py` publish/serve: the user pins notes on the model, `context` turns them into vertices, bones and frames — `../../qa-review/references/review-notes.md`); nothing is delivered |
-| PRODUCTION | Enabled stages from `geometry` to `animation` | At gates the spec lists in `acceptance.approve_at` |
+| PRODUCTION | Enabled stages from `geometry` to `animation` | At gates the spec lists in `acceptance.approve_at`; before each visual gate the agent checks the model in the review viewer itself and offers it to the user (§7a) |
 | VALIDATE | Re-runs gates on the latest checkpoint | Only if a gate fails |
 | EXPORT | Export → web/engine optimisation → G6–G8 → report | Final review |
 
@@ -38,7 +38,7 @@ The planner enables stages from **intake facts × output spec**. It never enable
 | Intake fact / spec field | Stage decision |
 |--------------------------|----------------|
 | `triangles` > `budgets.triangles` and asset static | `geometry.strategy: decimate` (+ bake normal from source) |
-| `triangles` > budget and asset must deform | `geometry.strategy: retopo` via `deformation-prep` (joint loops), bake from source |
+| `triangles` > budget and asset must deform | `geometry.strategy: retopo` via `deformation-prep` (joint loops), bake from source; quad base from `geometry.remesher` (`quadriflow` / `autoremesher` / `auto` → `deform_mesh.py remesher`) |
 | Mesh split along UV seams (many components, many boundary edges) | Weld in intake before any analysis |
 | Structure archetype (`reports/structure.json`, confirmed by the user when asked) | Rig and clips per `motion-analysis.md` §2: `skinned` → `deformation-prep` → `rigging` → `animation`; `rigid_whole`/`rigid_parts` → `rigid_rig.py` or `hinge_rig.py`, no skinning; `chain_flex` → `chain_rig.py` + skin; `morph` → shape keys |
 | Category preset (`asset.category`) | Prior only: fills defaults the user has not set; when it disagrees with the structure, show both and ask |
@@ -101,7 +101,7 @@ Gate runner: `production/scripts/validation/gates.py`. Each gate writes `reports
 ```
 
 Resume protocol:
-0. Read `PROJECT.md` (constraints, open issues, last changelog entries).
+0. Read `PROJECT.md` (constraints, open issues, last changelog entries, the standing review-viewer answer).
 1. Read `state.json`; find the first stage whose status is not `passed`.
 2. Open `last_good_checkpoint` in Blender (via MCP) — never re-import the source.
 3. Re-run that stage only; then its gate.
@@ -126,10 +126,34 @@ Scripts in `production/scripts/blender/` are plain Python modules with a `run(ar
 
 - G1 plan approval.
 - Any destructive step on data not yet checkpointed.
-- Joint placement (start of `deformation-prep`) and G4a/G4c for creatures.
+- Joint placement (start of `deformation-prep`) and G4a/G4c for creatures — with the review viewer offered (§7a).
 - Blocking questions from `reports/structure.json` (archetype, front, cutting fused parts, hinge) — answers go to `plan.yaml → decisions`.
 - Animation source request when a clip has no source.
 - Missing spec field that changes geometry, rig or budget.
+
+## 7a. Review Viewer at Visual Gates
+
+Visual gates — G4a (deform mesh + joints), G4c (ROM / skin), G5 (each clip) and the final delivery — are judged
+in the viewer the deliverable will run in (three.js), not only from Blender screenshots.
+Tools: `review_notes.py` (`publish`, `serve`, `stop`, `context`, `reply`) — `../../qa-review/references/review-notes.md`.
+
+1. **Agent self-check first (always, the user does not have to ask).** `publish` the current state (rig + skinned
+   meshes, the clips of the gate), `serve`, open `http://127.0.0.1:8765/` in a browser on the Blender machine
+   (the built-in browser or the user's Chrome reach the server; a cloud browser does not), and run the checks in
+   `review-notes.md → Agent Self-Check`. Every problem found becomes a note with `author: "agent"`; fix it in
+   Blender, `publish` again (current → previous, A/B view), re-check, `reply` with numbers. Present the gate only
+   when no agent note is left open, or list the ones left open with the reason.
+2. **Ask the user** in the same question that asks for the gate approval: "Open the review viewer to check it
+   yourself?" (options: open it now / no, approve from the images). Skip the question when `PROJECT.md` §3 already
+   holds the answer ("always open the viewer at visual gates" / "never"); record a standing answer there when the
+   user gives one.
+3. **Yes →** keep the server running, open the page for the user (built-in browser pane, or give the URL), set the
+   clip and frame of interest, and wait. Read their pins with `context`; never guess a spot from a screenshot.
+4. **When the gate is closed** (approved or sent back), `stop` the server unless the user is still using it, and
+   say so. Record in the gate approval note whether the viewer was used (`--note "... viewer: agent + user"`).
+
+The headless runtime check (G7, `runtime_check.mjs`) stays: it measures, the viewer is where people and the agent
+look.
 
 ## 8. Report
 

@@ -1,7 +1,7 @@
 """Build the deform mesh (deformation-prep step 4, gate G4a).
 
-Pipeline: copy source → weld + fill tiny holes → (pre-decimate for speed) → QuadriFlow quad remesh
-→ shrinkwrap to source → enforce joint loops with edge-ring cuts → shrinkwrap again.
+Pipeline: copy source → weld + fill tiny holes → (pre-decimate for speed) → quad remesh (QuadriFlow or
+AutoRemesher) → shrinkwrap to source → enforce joint loops with edge-ring cuts → shrinkwrap again.
 
 The source object is never modified.
 
@@ -9,8 +9,14 @@ args:
     source          (str, required)  source mesh object
     name            (str)            new object name, default "<source>_deform"
     target_faces    (int, required)  quad face target (≈ triangle budget / 2)
-    predecimate_tris (int, 300000)   decimate the COPY to this many triangles before QuadriFlow (0 = off)
-    symmetry        (bool, False)    QuadriFlow mesh symmetry (X)
+    remesher        (str, "quadriflow")  "quadriflow" (built in) | "autoremesher" (needs the AutoRemesher
+                                     extension, see autoremesh.py; error if missing) | "auto" (AutoRemesher
+                                     when available, else QuadriFlow; a failed AutoRemesher run also falls back)
+    autoremesher    (dict)           AutoRemesher options passed to autoremesh.py: adaptivity, edge_scaling,
+                                     sharp_edge_deg, smooth_normal_deg, island_detail, preserve_thin,
+                                     hard_surface, weld_shells, timeout, core_path
+    predecimate_tris (int, 300000)   decimate the COPY to this many triangles before remeshing (0 = off)
+    symmetry        (bool, False)    QuadriFlow mesh symmetry (X); AutoRemesher has none (reported as a warning)
     joints          (list[dict])     [{"name": "elbow.L", "head": [x,y,z], "axis": [x,y,z],
                                        "loops": 3, "band_halfwidth": 0.02, "radius": 0.02}]  (from joint_analysis.py)
     shrinkwrap_offset (float, 0.0)
@@ -41,6 +47,18 @@ def _load_common():
 
 
 C = _load_common()
+
+
+def _load_autoremesh():
+    here = os.path.dirname(os.path.abspath(globals().get("__file__", "")) or ".")
+    path = os.path.join(here, "autoremesh.py")
+    if os.path.exists(path):
+        spec = importlib.util.spec_from_file_location("u3d_autoremesh", path)
+        mod = importlib.util.module_from_spec(spec)
+        sys.modules["u3d_autoremesh"] = mod
+        spec.loader.exec_module(mod)
+        return mod
+    return sys.modules.get("u3d_autoremesh")  # no local clone: send autoremesh.py first, or use quadriflow
 
 
 def _activate(ob):
@@ -180,16 +198,8 @@ def _quadriflow_scale(me, limit=1e-4, margin=3.0) -> float:
     return float(min(limit * margin / max(shortest, 1e-12), 1e4))
 
 
-def run(args: dict) -> dict:
-    src = bpy.data.objects.get(args.get("source", ""))
-    if src is None or src.type != "MESH":
-        return C.result_error("source mesh required")
-    if "target_faces" not in args:
-        return C.result_error("target_faces required (from budgets.triangles / 2)")
-    name = args.get("name", f"{src.name}_deform")
-    ob = copy_source(src, name, args.get("collection", "COL_Deform"))
-    weld_and_fill(ob)
-    predecimate(ob, int(args.get("predecimate_tris", 300000)))
+def quadriflow(ob, target_faces, symmetry=False):
+    """QuadriFlow on `ob` in place. Returns (ok, info)."""
     _activate(ob)
     # Blender's QuadriFlow pre-check rejects edges shorter than 1e-4 on every axis ("needs to be manifold…"),
     # which small real-scale assets (a 25 cm kitten) hit after decimation. QuadriFlow is scale-invariant,
@@ -197,19 +207,66 @@ def run(args: dict) -> dict:
     k = _quadriflow_scale(ob.data)
     if k != 1.0:
         ob.data.transform(Matrix.Scale(k, 4))
-    res = bpy.ops.object.quadriflow_remesh(target_faces=int(args["target_faces"]),
-                                           use_mesh_symmetry=bool(args.get("symmetry", False)),
+    res = bpy.ops.object.quadriflow_remesh(target_faces=int(target_faces), use_mesh_symmetry=bool(symmetry),
                                            use_preserve_sharp=False, use_preserve_boundary=False,
                                            preserve_attributes=False, smooth_normals=False, seed=0)
     if k != 1.0:
         ob.data.transform(Matrix.Scale(1.0 / k, 4))
         ob.data.update()
     if "FINISHED" not in res:
-        return C.result_error(f"QuadriFlow failed: {res} (mesh must be manifold with consistent normals)",
-                              object=ob.name, prescale=k)
+        return False, {"error": f"QuadriFlow failed: {res} (mesh must be manifold with consistent normals)",
+                       "prescale": k}
+    return True, {"prescale": k}
+
+
+def autoremesher(ob, target_faces, opts, symmetry=False):
+    """AutoRemesher on `ob` in place. Returns (ok, info); info["unavailable"] when the core is missing."""
+    AR = _load_autoremesh()
+    if AR is None:
+        return False, {"error": "autoremesh.py not loaded", "unavailable": True}
+    found = AR.probe(opts.get("core_path"))
+    if not found["available"]:
+        return False, {"error": "AutoRemesher extension not available", "unavailable": True, "probe": found}
+    res = AR.remesh_object(ob, {**opts, "target_faces": int(target_faces)}, found["core_dir"], in_place=True)
+    res.pop("object", None)
+    if symmetry:
+        res.setdefault("warnings", []).append("symmetry ignored: AutoRemesher has no symmetry option")
+    return bool(res.pop("ok")), res
+
+
+def run(args: dict) -> dict:
+    src = bpy.data.objects.get(args.get("source", ""))
+    if src is None or src.type != "MESH":
+        return C.result_error("source mesh required")
+    if "target_faces" not in args:
+        return C.result_error("target_faces required (from budgets.triangles / 2)")
+    choice = args.get("remesher", "quadriflow")
+    if choice not in ("quadriflow", "autoremesher", "auto"):
+        return C.result_error(f"remesher must be quadriflow | autoremesher | auto, got {choice!r}")
+    name = args.get("name", f"{src.name}_deform")
+    ob = copy_source(src, name, args.get("collection", "COL_Deform"))
+    weld_and_fill(ob)
+    predecimate(ob, int(args.get("predecimate_tris", 300000)))
+    target, sym = int(args["target_faces"]), bool(args.get("symmetry", False))
+    remesh = {"requested": choice}
+    ok, info = False, {}
+    if choice in ("autoremesher", "auto"):
+        ok, info = autoremesher(ob, target, dict(args.get("autoremesher") or {}), sym)
+        remesh.update(used="autoremesher", autoremesher=info)
+        if not ok and choice == "autoremesher":
+            hint = " — install the extension (autoremesh.py mode=probe) or use remesher: auto|quadriflow"
+            return C.result_error(info.get("error", "AutoRemesher failed") + hint, object=ob.name, remesh=remesh)
+        if not ok:   # auto: QuadriFlow on the untouched copy (in-place remesh only swaps data on success)
+            remesh["fallback"] = info.get("error", "AutoRemesher failed")
+    if not ok:
+        ok, info = quadriflow(ob, target, sym)
+        remesh.update(used="quadriflow", quadriflow=info)
+        if not ok:
+            return C.result_error(info["error"], object=ob.name, prescale=info.get("prescale"), remesh=remesh)
     shrinkwrap(ob, src, float(args.get("shrinkwrap_offset", 0.0)))
     loops = enforce_joint_loops(ob, args.get("joints", [])) if args.get("joints") else []
     if loops:
         shrinkwrap(ob, src, float(args.get("shrinkwrap_offset", 0.0)))
-    ob.data.shade_smooth()  # QuadriFlow output is flat; a flat cage bakes faceting into the normal map
-    return C.result_ok(object=ob.name, stats=C.mesh_stats(ob), joint_loops=loops, prescale=k)
+    ob.data.shade_smooth()  # remesh output is flat; a flat cage bakes faceting into the normal map
+    return C.result_ok(object=ob.name, stats=C.mesh_stats(ob), joint_loops=loops,
+                       prescale=remesh.get("quadriflow", {}).get("prescale", 1.0), remesh=remesh)

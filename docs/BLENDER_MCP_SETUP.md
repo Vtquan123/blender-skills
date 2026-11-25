@@ -100,11 +100,62 @@ Claude Code CLI: `claude mcp add blender -- uvx --python 3.11 blender-mcp` (Wind
 2. Ask for a viewport screenshot.
 3. For Production Mode, run the capability probe described in `docs/BLENDER_MCP_CAPABILITIES.md`.
 
+## Optional Extension — AutoRemesher
+
+Production Mode can build quad bases with [AutoRemesher for Blender](https://github.com/jakeblakeley/autoremesher-blender) instead of QuadriFlow (`deform_mesh.py remesher: autoremesher | auto`, spec `geometry.remesher`). Nothing else needs it.
+
+1. Download the zip for your platform from the [releases page](https://github.com/jakeblakeley/autoremesher-blender/releases):
+   - Blender **5.1+** → `autoremesher-<version>-<platform>.zip` (`macos_arm64`, `macos_x64`, `windows_x64`, `linux_x64`)
+   - Blender **4.2 LTS–5.0** → `autoremesher-<version>-blender42-<platform>.zip`
+2. **Edit → Preferences → Get Extensions → ▾ (top right) → Install from Disk…** → pick the zip. Keep it enabled.
+3. Check from the agent: run `production/scripts/blender/autoremesh.py` with `{"mode": "probe"}` — `available: true` and a `core_dir`.
+
+The skills only call the extension's compiled core (`autoremesher_core`, MIT) in a separate process; its add-on code (GPL-3.0) is not part of this pack. The extension's author reports testing on macOS Apple Silicon only so far — on other platforms, use `remesher: auto` so a failure falls back to QuadriFlow.
+
+## Optional App — Material Maker
+
+`materials` can export tileable PBR maps from [Material Maker](https://github.com/RodZill4/material-maker) graphs (`production/scripts/blender/material_maker.py`, guide: `.claude/skills/materials/references/material-maker.md`).
+
+1. Install the app from the [releases page](https://github.com/RodZill4/material-maker/releases): macOS `.dmg` → drag to Applications; Windows `.zip`; Linux `.tar.gz`.
+2. It is found automatically in `/Applications` (macOS), `Program Files` / `%LOCALAPPDATA%` (Windows), or on `PATH` / in `~` (Linux). Otherwise, set `MATERIAL_MAKER_PATH` to the executable, or pass `mm_path`.
+3. Check from the agent: run `material_maker.py` with `{"mode": "probe"}`. It should return `available: true` and a list of examples.
+
+The export opens a window and renders on the GPU, so it needs a desktop session.
+
+## Optional — MoCapAnything V2 (video motion capture)
+
+`animation` can capture motion from a video and retarget it onto a project rig (`production/scripts/blender/mocap_capture.py`, guide: `.claude/skills/animation/references/video-mocap.md`). It runs in its own Python environment, outside Blender. Download size: about 3 GB in total.
+
+1. Clone the repository and create the environment (Python 3.11, e.g. with `uv`):
+   ```bash
+   git clone https://github.com/kehong-gong/MoCapAnything ~/MoCapAnything
+   cd ~/MoCapAnything && uv venv --python 3.11 .venv && uv pip install --python .venv/bin/python -r requirements.txt
+   ```
+   If pip reports a conflict between the pinned `huggingface-hub` and `transformers`, keep the `huggingface-hub` version that `transformers` needs.
+2. Download the checkpoint into `checkpoints/` and the demo data into `demo/data/` (`zoo1030`: 80 animal reference skeletons), as described in the repository's README / `RUN.md`.
+3. The first capture downloads `facebook/dinov2-large` and `briaai/RMBG-1.4` from Hugging Face (≈ 1.5 GB).
+4. Another location: set `MOCAPANYTHING_HOME`, or pass `home` / `python`.
+5. Check from the agent: run `mocap_capture.py` with `{"mode": "probe"}`. It should return `available: true`, the number of rigs, and `cuda` / `mps`.
+
+Things to know:
+
+- **Speed:** without CUDA it uses Apple's GPU (MPS) or the CPU. On an M1 Pro, a 2 s clip takes about 30 s on MPS and 66 s on CPU. A 10 s 1080p clip takes about 7 min on CPU.
+- **Licences:**
+  - The code and the released weights are MIT.
+  - RMBG-1.4 is non-commercial.
+  - The zoo1030 characters are Truebones Zoo data.
+  - Check the licences before a captured clip ships.
+
 ## Troubleshooting
 
 | Issue | Fix |
 |-------|-----|
+| `material_maker.py` export "no maps written" | Desktop session with a GPU required; re-run once (a first launch can be slow or interrupted) |
+| `mocap_capture.py` probe lists `missing` | Path in the message: checkout, `.venv`, `checkpoints/*.pt` or `demo/data/zoo1030/bvh_pose` |
+| Capture `rig '<X>' has no reference pose` | Use a name from `{"mode": "rigs"}`; people need a custom rig preprocessed first (CUDA) |
+| Capture slow or MCP call times out | `wait: false`, then poll `{"mode": "status", "out_dir": ...}`; trim with `start` / `duration` |
 | Cannot connect to Blender at `localhost:9876` | Blender not running, add-on disabled, or (official) Online Access off |
+| `autoremesh.py` probe `available: false` | Extension not installed, or the zip does not match the Blender version (5.1+ vs `-blender42-`); reinstall the right zip |
 | Two add-ons fighting over 9876 | Disable one of them |
 | "Blender executable not found" on `*_for_cli` | Set `BLENDER_PATH` for the MCP server process |
 | `result` must be a dict (official) | Return `result = {...}` from `execute_blender_code` |

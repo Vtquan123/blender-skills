@@ -27,6 +27,7 @@ budgets:
 
 geometry:
   strategy: auto             # auto | keep | decimate | remesh | retopo
+  remesher: quadriflow       # quad base for remesh/retopo: quadriflow | autoremesher (extension) | auto
   preserve: [silhouette, uv_seams]
 
 surface:

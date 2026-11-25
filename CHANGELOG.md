@@ -6,6 +6,70 @@ Format: [Semantic Versioning](https://semver.org/) — `Major.Minor.Patch`
 
 ---
 
+## [Unreleased]
+
+### Added
+- **AutoRemesher backend** — `production/scripts/blender/autoremesh.py` runs the core of the optional
+  [AutoRemesher for Blender](https://github.com/jakeblakeley/autoremesher-blender) extension (`autoremesher_core`,
+  MIT) in a subprocess of Blender's Python, so a native crash cannot take Blender or the MCP session down. Blocks
+  until done (MCP-friendly, `timeout`), `mode: probe` reports whether this Blender can load it and which zip to
+  install. Options: adaptivity, edge scaling, sharp edges, smooth normals, island detail, preserve thin features,
+  hard surface, voxel `weld_shells`. Budget fitting: the core's count is approximate and shape-dependent
+  (63k-tri inputs: Suzanne at adaptivity 1 plateaus far below the target, 32k → 3.6k quads; a thin tube at
+  adaptivity 0 stays at 3–8k whatever the request). The script re-scales the request until faces land within
+  ±20% (`fit_target`, `max_passes`), switches adaptivity 0 ↔ 1 when the count stops following the request,
+  drops `preserve_thin` with a warning when still over budget (`budget_strict`), and caps all passes with
+  `total_timeout`. Independent implementation — none of the extension's GPL-3.0 add-on code is
+  included, and the extension is never bundled or downloaded by the scripts.
+- `deform_mesh.py` `remesher: quadriflow | autoremesher | auto` (+ `autoremesher` options); `auto` falls back to
+  QuadriFlow when the extension is missing or fails, and the result reports `remesh.used` / `remesh.fallback`.
+  Output spec `geometry.remesher`.
+- `production/tests/run_autoremesh_tests.py` — probe, error path, fallback (always run); sphere, deform mesh with
+  a joint, weld shells (skipped without the extension).
+- **Material Maker maps** — `production/scripts/blender/material_maker.py` runs the user-installed
+  [Material Maker](https://github.com/RodZill4/material-maker) (MIT) command-line export on a `.ptex` graph (an
+  example by name or the user's file). It overrides node parameters (`params`) and exposed controls (`controls`) in
+  a copy of the graph, then builds a glTF-ready material the way `bake_maps.py` does: Principled BSDF, ORM split,
+  glTF occlusion group, and tiling exported as `KHR_texture_transform`. Profiles: `GLTF/Plane` (albedo/ORM/normal/
+  emission) and `Blender` (separate roughness/metal/occlusion EXR). Modes: probe, list, export, material
+  (from maps on disk) and apply. Guide: `materials/references/material-maker.md`.
+- `production/tests/run_material_maker_tests.py` — overrides, material + glTF export check, CLI contract against a
+  stand-in executable (always run); real export (skipped without the app).
+- **Video motion capture (MoCapAnything V2)** — `production/scripts/blender/mocap_capture.py` runs the
+  user-installed [MoCapAnything V2](https://github.com/kehong-gong/MoCapAnything) (MIT) on a clip in its own
+  Python environment (`production/scripts/motion/mocapanything_runner.py`, separate process; Blender never imports
+  torch), imports the BVH and retargets it onto a project rig. Animals first: the demo data has 80 reference
+  skeletons (cat, dog, horse, birds, reptiles, insects …); the video may show another animal than the rig.
+  - Runner: one clip, trimmed / resampled / downscaled with ffmpeg first; device auto (CUDA, else Apple MPS,
+    else CPU); upstream's hard-coded `.cuda()` calls redirected and DINOv2 run in float32 off CUDA; BVH written
+    with the clip's real frame rate (upstream writes 30 fps regardless). Measured on an M1 Pro: 2 s clip at
+    15 fps in 30 s on MPS / 66 s on CPU (same result to 1e-5); a 10 s 1080p clip in about 7 min on CPU.
+  - Modes: probe, rigs, capture (`wait: false` + `status` for long runs), import, bones (both hierarchies and a
+    suggested map), retarget, apply.
+  - Retarget: world-space rotation change from rest per mapped bone, so names, rolls, scale and facing may
+    differ (facing fitted automatically). Automatic bone map by role and side, chains resampled; on generated
+    Rigify rigs only controls are targets (FK limbs, FK spine, neck, head, tail), `IK_FK` keyed to FK, and
+    additive Copy Rotation chains (tail) corrected iteratively. `error_deg` reports how closely each bone follows.
+    Rigify cat metarig from the demo cat clip: 61 bones, max error 0.04°.
+- `production/tests/run_mocap_tests.py` — bone roles, auto map, retarget between synthetic armatures with
+  different names/rolls/facing/scale (checked against world bone directions), frame offset, BVH import, status
+  log, missing install (always run); a real 2 s capture (`{"real": True}`, skipped without the install).
+
+### Changed
+- `retopology`, `deformation-prep` (`joint-loop-rules.md`), `production-mode.md` and `docs/BLENDER_MCP_SETUP.md`
+  document when to choose AutoRemesher over QuadriFlow and how to install it.
+- `materials` skill and `docs/BLENDER_MCP_SETUP.md` document Material Maker (when to use it, install, limits).
+- `animation`: new `references/video-mocap.md`; `reference-driven-motion.md` §5 now points to the optional capture
+  path instead of "can be added later". `docs/BLENDER_MCP_SETUP.md` documents the MoCapAnything install.
+- **Review viewer at visual gates** (`production-mode.md` §7a, `review-notes.md → Agent Self-Check`): before
+  G4a, G4c, G5 and delivery the agent publishes the model, opens the local viewer and checks it itself (surface
+  modes, weights per joint bone, clip frames at key poses and motion-QA marks, close-ups), records problems as
+  `author: "agent"` notes, fixes and re-checks; then asks the user in the approval question whether to open the
+  viewer for them. Standing answer kept in `PROJECT.md` §3 (template line added). The server is stopped when the
+  gate closes. Found in the dog test run: the viewer was never opened, the user only saw screenshots.
+
+---
+
 ## [1.6.0] — 2026-11-22
 
 Rigging, animation and meshing efficiency. Methods studied in elithril/blender-kiln (MIT), aresdevo/animaide

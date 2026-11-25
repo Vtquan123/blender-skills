@@ -20,7 +20,10 @@ These are the default rules shipped in category presets (`production/presets/cat
 ## Building the Deform Mesh
 
 1. Weld the source copy (see `asset-intake/references/intake-metrics.md`).
-2. Automatic quad base at the triangle budget: Blender QuadriFlow (`bpy.ops.object.quadriflow_remesh`) is built in; a third-party remesher may be used if installed and allowed by the user.
+2. Automatic quad base at the triangle budget (`deform_mesh.py remesher`):
+   - `quadriflow` (default) — Blender's built-in `bpy.ops.object.quadriflow_remesh`; needs a manifold mesh; supports X symmetry.
+   - `autoremesher` — the AutoRemesher extension's core, run in a subprocess by `production/scripts/blender/autoremesh.py`. Curvature-adaptive quads, keeps thin features (`preserve_thin`) and small islands (`island_detail`), no manifold pre-check, can fuse intersecting shells (`weld_shells`). No symmetry. The user installs the extension; probe first (`autoremesh.py mode=probe`).
+   - `auto` — AutoRemesher when available, QuadriFlow otherwise or when AutoRemesher fails; the result's `remesh.used` / `remesh.fallback` say which ran.
 3. Measure each joint band (`joint-analysis.md` metrics). For bands below the rule:
    - add loops with loop cuts on rings that already cross the band, or
    - re-remesh the region with higher density (vertex-group density, or a local remesh + bridge), then re-measure.

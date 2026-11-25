@@ -44,7 +44,7 @@ Gather brief budgets → Screenshot key angles → Run checklists
 
 Use the MCP viewport screenshot (`get_screenshot_of_area_as_image`, `VIEW_3D`) when connected; frame first with `jump_to_view3d_object_by_name`.
 
-When the user reviews, prefer the review viewer over screenshots: `review_notes.py` publishes the model to a local three.js page where the user clicks and pins notes; each note comes back as Blender data (object, rest/posed point, vertex indices, skin weights, Blender frame, camera) — `references/review-notes.md`.
+When the user reviews, prefer the review viewer over screenshots: `review_notes.py` publishes the model to a local three.js page where the user clicks and pins notes; each note comes back as Blender data (object, rest/posed point, vertex indices, skin weights, Blender frame, camera) — `references/review-notes.md`. At every visual gate (G4a, G4c, G5, delivery) the agent first checks the model in the viewer itself (surface modes, weights per joint bone, clip frames at key poses and motion-QA marks, close-ups) and records what it finds as `author: "agent"` notes, then asks the user whether to open the viewer for them (`../blender-director/references/production-mode.md` §7a).
 
 ## Checklists (load as needed)
 
